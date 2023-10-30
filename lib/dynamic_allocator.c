@@ -7,6 +7,7 @@
 #include <inc/assert.h>
 #include <inc/string.h>
 #include "../inc/dynamic_allocator.h"
+bool is_initialized = 0;
 
 
 //==================================================================================//
@@ -93,6 +94,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	//DON'T CHANGE THESE LINES=================
 	if (initSizeOfAllocatedSpace == 0)
 		return ;
+	is_initialized = 1;
 	//=========================================
 	//=========================================
 
@@ -128,6 +130,15 @@ void *alloc_block_FF(uint32 size)
 	if(size==0){
 		return NULL;
 	}
+	if (!is_initialized)
+	{
+		uint32 required_size = size + sizeOfMetaData();
+		uint32 da_start = (uint32)sbrk(required_size);
+		//get new break since it's page aligned! thus, the size can be more than the required one
+		uint32 da_break = (uint32)sbrk(0);
+		initialize_dynamic_allocator(da_start, da_break - da_start);
+	}
+
 	// case 1 -> list has one block which is free
 	if(listsize == 1 && LIST_FIRST(&myListOfBlocks)->is_free == 1){
 		// case size is greater -> sbrk
