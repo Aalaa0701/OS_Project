@@ -105,11 +105,11 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	LIST_INIT(&myListOfBlocks);
 	struct BlockMetaData* first_Block;
 	first_Block = (struct BlockMetaData*)daStart;
-	first_Block->is_free=1;
+	LIST_INSERT_HEAD(&myListOfBlocks, first_Block);
 	first_Block->size=initSizeOfAllocatedSpace;
+	first_Block->is_free=1;
 	first_Block->prev_next_info.le_next=NULL;
 	first_Block->prev_next_info.le_prev=NULL;
-	LIST_INSERT_HEAD(&myListOfBlocks, first_Block);
 
 }
 

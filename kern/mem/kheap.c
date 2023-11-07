@@ -16,8 +16,17 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	//	Otherwise (if no memory OR initial size exceed the given limit): E_NO_MEM
 
 	//Comment the following line(s) before start coding...
-	panic("not implemented yet");
+	//panic("not implemented yet");
+
+	if (initSizeToAllocate > (hard_limit-KHstart)|| daStart == KERNEL_HEAP_MAX){
+		return E_NO_MEM;
+	}
+	initialize_dynamic_allocator(daStart,initSizeToAllocate);
+	KHstart = daStart;
+	segment_break = KHstart + initSizeToAllocate;
+	hard_limit=daLimit;
 	return 0;
+
 }
 
 void* sbrk(int increment)
