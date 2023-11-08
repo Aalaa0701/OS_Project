@@ -111,6 +111,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	first_Block->prev_next_info.le_next=NULL;
 	first_Block->prev_next_info.le_prev=NULL;
 
+
 }
 
 //=========================================

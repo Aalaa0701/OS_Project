@@ -4,6 +4,7 @@
 #include <inc/dynamic_allocator.h>
 #include "memory_manager.h"
 
+uint32 num_of_pages_allocated = 0;
 
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
@@ -14,17 +15,18 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	//Return:
 	//	On success: 0
 	//	Otherwise (if no memory OR initial size exceed the given limit): E_NO_MEM
-
-	//Comment the following line(s) before start coding...
-	//panic("not implemented yet");
-
-	if (initSizeToAllocate > (hard_limit-KHstart)|| daStart == KERNEL_HEAP_MAX){
+	if (initSizeToAllocate > (daLimit-daStart)|| daLimit == daStart){
 		return E_NO_MEM;
 	}
-	initialize_dynamic_allocator(daStart,initSizeToAllocate);
 	KHstart = daStart;
 	segment_break = KHstart + initSizeToAllocate;
-	hard_limit=daLimit;
+	hard_limit = daLimit;
+	struct FrameInfo* frame_allocated = NULL;
+	allocate_frame(&frame_allocated);
+	map_frame(ptr_page_directory, frame_allocated, daStart, PERM_WRITEABLE);
+	initialize_dynamic_allocator(KHstart,initSizeToAllocate);
+	//Comment the following line(s) before start coding...
+	//panic("not implemented yet");
 	return 0;
 
 }
@@ -58,9 +60,124 @@ void* kmalloc(unsigned int size)
 	//TODO: [PROJECT'23.MS2 - #03] [1] KERNEL HEAP - kmalloc()
 	//refer to the project presentation and documentation for details
 	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
+	if(isKHeapPlacementStrategyFIRSTFIT() == 1){
+		cprintf("first fit\n");
+		// case size greater than heap
+		if(size >= ((uint32)KERNEL_HEAP_MAX) - ((uint32)KERNEL_HEAP_START + (uint32)DYN_ALLOC_MAX_SIZE + (uint32)PAGE_SIZE)){
+			cprintf("first null\n");
+			return NULL;
+		}
+		struct BlockMetaData* v_address;
+		// case allocator ms1
+		if(size <= (uint32)DYN_ALLOC_MAX_BLOCK_SIZE){
+			cprintf("size block\n");
+			v_address = alloc_block_FF(size);
+			struct FrameInfo* frame_allocated = NULL;
+			allocate_frame((struct FrameInfo**)frame_allocated);
+			map_frame(ptr_page_directory, frame_allocated, (uint32)v_address, PERM_WRITEABLE);
+			return v_address;
+		}
+		// case page allocator
+		else{
+			cprintf("size page\n");
+			uint32 number_of_pages;
+			struct BlockMetaData* iterator;
+			if(size % (uint32)PAGE_SIZE == 0){
+				number_of_pages = size / (uint32)PAGE_SIZE;
+			}
+			else{
+				number_of_pages = (size / (uint32)PAGE_SIZE) + 1;
+			}
+			//cprintf("num of pages: %d\n", number_of_pages);
+			if(LIST_FIRST(&list_of_pages) == NULL){
+				cprintf("null list\n");
+				for(int i = 0; i < number_of_pages; i++){
+					cprintf("loop\n");
+					if(i == 0){
+						struct BlockMetaData* first_page = (struct BlockMetaData*)(hard_limit + (unsigned int)PAGE_SIZE);
+						cprintf("assign address\n");
+						struct FrameInfo* frame_allocated = NULL;
+						allocate_frame(&frame_allocated);
+						cprintf("allocate frame\n");
+						map_frame(ptr_page_directory, frame_allocated, (unsigned int)first_page, PERM_WRITEABLE);
+						cprintf("map frame\n");
+						num_of_pages_allocated++;
+						first_page->is_free = 0;
+						first_page->size = PAGE_SIZE;
+						LIST_INSERT_HEAD(&list_of_pages, first_page);
 
+
+					}
+					else if(i == number_of_pages - 1){
+						struct BlockMetaData* before_last_page = (struct BlockMetaData*)((unsigned int)LIST_LAST(&list_of_pages) + (unsigned int)PAGE_SIZE);
+						cprintf("assign address\n");
+						struct FrameInfo* frame_allocated = NULL;
+						cprintf("allocate frame\n");
+						allocate_frame(&frame_allocated);
+						map_frame(ptr_page_directory, frame_allocated, (unsigned int)before_last_page, PERM_WRITEABLE);
+						cprintf("map frame\n");
+						before_last_page->is_free = 0;
+						before_last_page->size = PAGE_SIZE;
+						cprintf("change values\n");
+						LIST_INSERT_AFTER(&list_of_pages, LIST_LAST(&list_of_pages), before_last_page);
+						num_of_pages_allocated++;
+//						struct BlockMetaData* last_page = (struct BlockMetaData*)((unsigned int)before_last_page + (unsigned int)PAGE_SIZE);
+//						last_page->is_free = 1;
+//						uint32 num_of_pages_allocator = ((unsigned int)KERNEL_HEAP_MAX - (unsigned int)hard_limit +(unsigned int)PAGE_SIZE) / PAGE_SIZE;
+//						last_page->size = (num_of_pages_allocator - number_of_pages) * (unsigned int)PAGE_SIZE;
+//						LIST_INSERT_TAIL(&list_of_pages, last_page);
+					}
+					else{
+						cprintf("else\n");
+						struct BlockMetaData* normal_page = (struct BlockMetaData*)((unsigned int)LIST_LAST(&list_of_pages) + (unsigned int)PAGE_SIZE);
+						struct FrameInfo* frame_allocated = NULL;
+						allocate_frame(&frame_allocated);
+						map_frame(ptr_page_directory, frame_allocated, (unsigned int)normal_page, PERM_WRITEABLE);
+						normal_page->is_free = 0;
+						normal_page->size = PAGE_SIZE;
+						LIST_INSERT_TAIL(&list_of_pages, normal_page);
+
+					}
+				}
+				cprintf("before return\n");
+				return LIST_FIRST(&list_of_pages);
+			}
+			LIST_FOREACH(iterator, &list_of_pages){
+				if(iterator->is_free == 1 && iterator->size >= number_of_pages * PAGE_SIZE){
+					cprintf("iterator is free\n");
+					uint32 remaining_size = iterator->size - number_of_pages * (unsigned int)PAGE_SIZE;
+					struct BlockMetaData* current_address = iterator;
+					for(int i = 0; i < number_of_pages; i++){
+						if(i == 0){
+							iterator->is_free = 0;
+							iterator->size = PAGE_SIZE;
+						}
+						else if(i != 0 && i < number_of_pages - 1){
+							struct BlockMetaData* new_block =(struct BlockMetaData*)((unsigned int)iterator +(unsigned int)((unsigned int)PAGE_SIZE * i));
+							new_block->is_free = 0;
+							new_block->size = PAGE_SIZE;
+							LIST_INSERT_AFTER(&list_of_pages, iterator, new_block);
+							iterator = new_block;
+						}
+						else{
+							struct BlockMetaData* new_block =(struct BlockMetaData*)((unsigned int)iterator +(unsigned int)((unsigned int)PAGE_SIZE * i));
+							struct BlockMetaData* remaining_block =(struct BlockMetaData*)((unsigned int)new_block +(unsigned int)((unsigned int)PAGE_SIZE * i));
+							new_block->is_free = 0;
+							new_block->size = PAGE_SIZE;
+							LIST_INSERT_AFTER(&list_of_pages, iterator, new_block);
+							remaining_block->is_free = 1;
+							remaining_block->size = PAGE_SIZE;
+							LIST_INSERT_AFTER(&list_of_pages, new_block, remaining_block);
+						}
+						return current_address;
+					}
+
+				}
+			}
+		}
+	}
 	//change this "return" according to your answer
-	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 	return NULL;
 }
 

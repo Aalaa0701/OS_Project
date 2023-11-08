@@ -27,6 +27,7 @@ struct BlockMetaData
 	LIST_ENTRY(BlockMetaData) prev_next_info;	/* linked list links */
 };
 struct MemBlock_LIST myListOfBlocks;
+struct MemBlock_LIST list_of_pages;
 #define sizeOfMetaData() (sizeof(struct BlockMetaData))
 
 
