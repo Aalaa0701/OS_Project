@@ -114,6 +114,9 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 }
 
+
+
+
 //=========================================
 // [4] ALLOCATE BLOCK BY FIRST FIT:
 //=========================================
@@ -126,13 +129,13 @@ void *alloc_block_FF(uint32 size)
 	uint32 size_to_be_allocated = size+(unsigned int)sizeOfMetaData();
 	uint32 address_offset_2 = size_to_be_allocated;
 	uint8 found = 0;
-
 	int listsize = LIST_SIZE(&myListOfBlocks);
 	if(size==0){
 		return NULL;
 	}
 	if (!is_initialized)
 	{
+		cprintf("modifications of dr\n");
 		uint32 required_size = size + sizeOfMetaData();
 		uint32 da_start = (uint32)sbrk(required_size);
 		//get new break since it's page aligned! thus, the size can be more than the required one
@@ -145,15 +148,13 @@ void *alloc_block_FF(uint32 size)
 		// case size is greater -> sbrk
 		if(size_to_be_allocated > LIST_FIRST(&myListOfBlocks)->size){
 			uint32 size_requested = size_to_be_allocated - LIST_FIRST(&myListOfBlocks)->size;
-			if((int)sbrk(size_requested) == -1){
-				return NULL;
-			}
-			else{
+			if(sbrk(size_requested) != NULL){
 				LIST_FIRST(&myListOfBlocks)->is_free = 0;
 				LIST_FIRST(&myListOfBlocks)->size = size_to_be_allocated;
 				struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&myListOfBlocks)+(unsigned int)sizeOfMetaData());
 				return address;
 			}
+
 		}
 		// case size is equal
 		else if(size_to_be_allocated == LIST_FIRST(&myListOfBlocks)->size){
@@ -166,7 +167,7 @@ void *alloc_block_FF(uint32 size)
 		else{
 			uint32 size_first = LIST_FIRST(&myListOfBlocks)->size;
 			uint32 size_remaining = size_first - size_to_be_allocated;
-			if(size_remaining >= sizeOfMetaData()){
+			if(size_remaining > sizeOfMetaData()){
 				_Block = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&myListOfBlocks) + size_to_be_allocated);
 				LIST_INSERT_TAIL(&myListOfBlocks,_Block);
 				LIST_FIRST(&myListOfBlocks)->size = size_to_be_allocated;
@@ -184,17 +185,48 @@ void *alloc_block_FF(uint32 size)
 	}
 	// case 2 list has one block which is not free
 	else if(listsize == 1 && LIST_FIRST(&myListOfBlocks)->is_free == 0){
-		if((int)sbrk(size_to_be_allocated) == -1){
-			return NULL;
+		if(size_to_be_allocated % PAGE_SIZE == 0){
+			if(sbrk(size_to_be_allocated) != NULL){
+				struct BlockMetaData* new_block = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated));
+				new_block->is_free = 0;
+				new_block->size = size_to_be_allocated;
+				LIST_INSERT_TAIL(&myListOfBlocks, new_block);
+				struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated)+sizeOfMetaData());
+				return address;
+			}
 		}
 		else{
-			_Block = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&myListOfBlocks) + address_offset_2);
-			LIST_INSERT_TAIL(&myListOfBlocks, _Block);
-			LIST_LAST(&myListOfBlocks)->is_free = 0;
-			LIST_LAST(&myListOfBlocks)->size = size_to_be_allocated;
-			struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks)+(unsigned int)sizeOfMetaData());
-			return address;
+			if(sbrk(size_to_be_allocated) != NULL){
+				uint32 size_in_sbrk = (size_to_be_allocated / PAGE_SIZE) + 1;
+				uint32 size_free = size_in_sbrk * PAGE_SIZE - size_to_be_allocated;
+				struct BlockMetaData* new_block = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated));
+				new_block->is_free = 0;
+				LIST_INSERT_TAIL(&myListOfBlocks, new_block);
+				if(size_free > sizeOfMetaData()){
+					struct BlockMetaData* free_block = (struct BlockMetaData*)((unsigned int)new_block + new_block->size);
+					free_block->is_free = 1;
+					free_block->size = size_free;
+					new_block->size = size_to_be_allocated;
+					LIST_INSERT_AFTER(&myListOfBlocks, new_block, free_block);
+				}
+				else{
+					new_block->size = size_to_be_allocated + size_free;
+				}
+				struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated)+sizeOfMetaData());
+				return address;
+			}
 		}
+//		if((int)sbrk(size_to_be_allocated) == -1){
+//			return NULL;
+//		}
+//		else{
+//			_Block = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&myListOfBlocks) + address_offset_2);
+//			LIST_INSERT_TAIL(&myListOfBlocks, _Block);
+//			LIST_LAST(&myListOfBlocks)->is_free = 0;
+//			LIST_LAST(&myListOfBlocks)->size = size_to_be_allocated;
+//			struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks)+(unsigned int)sizeOfMetaData());
+//			return address;
+//		}
 	}
 	// case 3 list has more than one block
 	else if(listsize > 1){
@@ -269,17 +301,52 @@ void *alloc_block_FF(uint32 size)
 
 		}
 		if(found == 0){
-			if((int)sbrk(size_to_be_allocated) == -1){
-				return NULL;
+			cprintf("use sbrk\n");
+			if(size_to_be_allocated % PAGE_SIZE == 0){
+				cprintf("size multiple 4\n");
+				if(sbrk(size_to_be_allocated) != NULL){
+					_Block = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated));
+					LIST_INSERT_TAIL(&myListOfBlocks, _Block);
+					_Block->is_free = 0;
+					_Block->size = size_to_be_allocated;
+					struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
+					return address;
+				}
 			}
 			else{
-				_Block = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks) + address_offset_2);
-				LIST_INSERT_TAIL(&myListOfBlocks, _Block);
-				_Block->is_free = 0;
-				_Block->size = size_to_be_allocated;
-				struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
-				return address;
+				cprintf("size NOT multiple 4\n");
+				if(sbrk(size_to_be_allocated) != NULL){
+
+					uint32 size_in_sbrk = (size_to_be_allocated / PAGE_SIZE) + 1;
+					uint32 size_free = size_in_sbrk * PAGE_SIZE - size_to_be_allocated;
+					_Block = (struct BlockMetaData*)((unsigned int)sbrk(size_to_be_allocated));
+					LIST_INSERT_TAIL(&myListOfBlocks, _Block);
+					_Block->is_free = 0;
+					if(size_free > sizeOfMetaData()){
+						struct BlockMetaData* free_block = (struct BlockMetaData*)((unsigned int)_Block + _Block->size);
+						free_block->is_free = 1;
+						free_block->size = size_free;
+						_Block->size = size_to_be_allocated;
+						LIST_INSERT_AFTER(&myListOfBlocks, _Block, free_block);
+					}
+					else{
+						_Block->size = size_to_be_allocated;
+					}
+					struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
+					return address;
+				}
 			}
+//			if((int)sbrk(size_to_be_allocated) == -1){
+//				return NULL;
+//			}
+//			else{
+//				_Block = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks) + address_offset_2);
+//				LIST_INSERT_TAIL(&myListOfBlocks, _Block);
+//				_Block->is_free = 0;
+//				_Block->size = size_to_be_allocated;
+//				struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
+//				return address;
+//			}
 		}
 
 	}

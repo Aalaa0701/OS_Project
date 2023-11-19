@@ -44,7 +44,8 @@ uint32 get_block_size(void* va);
 int8 is_free_block(void* va);
 void print_blocks_list(struct MemBlock_LIST list);
 //===================================================================
-
+void initialize_page_allocator();
+void* alloc_page_ff(unsigned int size);
 //Required Functions
 //In KernelHeap: should be implemented inside kern/mem/kheap.c
 //In UserHeap: should be implemented inside lib/uheap.c

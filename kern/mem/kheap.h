@@ -31,6 +31,7 @@ static inline uint8 isKHeapPlacementStrategyWORSTFIT(){if(_KHeapPlacementStrateg
 
 //***********************************
 
+
 void* kmalloc(unsigned int size);
 void kfree(void* virtual_address);
 void *krealloc(void *virtual_address, unsigned int new_size);
