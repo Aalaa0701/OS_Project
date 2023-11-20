@@ -201,7 +201,7 @@ void kclock_set_quantum(uint8 quantum_in_ms)
 	}
 	else
 	{
-		//panic("attempt to set the CPU quantum by too large value. Quantum should be between 1 ms and %d ms", QUANTUM_LIMIT - 1);
+		panic("attempt to set the CPU quantum by too large value. Quantum should be between 1 ms and %d ms", QUANTUM_LIMIT - 1);
 	}
 }
 //==============
