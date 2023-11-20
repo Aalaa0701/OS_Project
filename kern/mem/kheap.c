@@ -324,6 +324,7 @@ void* alloc_page_ff(unsigned int size){
 
 
 
+
 void* kmalloc(unsigned int size)
 {
 	//TODO: [PROJECT'23.MS2 - #03] [1] KERNEL HEAP - kmalloc()
@@ -359,58 +360,92 @@ void* kmalloc(unsigned int size)
 					for(int i = 0; i < number_of_pages; i++){
 						if(i == 0){
 							struct BlockMetaData* first_page = (struct BlockMetaData*)(hard_limit + (unsigned int)PAGE_SIZE );
-						//	cprintf("free frames before: %d\n", sys_calculate_free_frames());
 							struct FrameInfo* frame_allocated = NULL;
 							allocate_frame(&frame_allocated);
 							map_frame(ptr_page_directory, frame_allocated, (unsigned int)first_page, PERM_PRESENT|PERM_WRITEABLE);
-							//cprintf("free frames after: %d\n", sys_calculate_free_frames());
-							num_of_pages_allocated++;
-							first_page->is_free = 0;
 							first_page->size = number_of_pages;
+							first_page->is_free = 0;
 							LIST_INSERT_HEAD(&list_of_pages, first_page);
 						}
 						else{
-							struct BlockMetaData* normal_page = (struct BlockMetaData*)((unsigned int)LIST_LAST(&list_of_pages) + (unsigned int)PAGE_SIZE);
-							//cprintf("free frames before: %d\n", sys_calculate_free_frames());
-							struct FrameInfo* frame_allocated = NULL;
-							allocate_frame(&frame_allocated);
-							map_frame(ptr_page_directory, frame_allocated, (unsigned int)normal_page, PERM_PRESENT|PERM_WRITEABLE);
-							//cprintf("free frames after: %d\n", sys_calculate_free_frames());
-							normal_page->is_free = 0;
-							normal_page->size = PAGE_SIZE;
-							LIST_INSERT_TAIL(&list_of_pages, normal_page);
-							num_of_pages_allocated++;
+							struct FrameInfo* new_frame = NULL;
+							allocate_frame(&new_frame);
+							map_frame(ptr_page_directory, new_frame, (unsigned int)LIST_FIRST(&list_of_pages)+((unsigned int)PAGE_SIZE * i), PERM_PRESENT|PERM_WRITEABLE);
 						}
-					}
-					return LIST_FIRST(&list_of_pages);
-				}
-				else{
-					struct BlockMetaData* iterator = (struct BlockMetaData*)((unsigned int)LIST_LAST(&list_of_pages) + ((unsigned int)PAGE_SIZE));
-					for(unsigned int i = 0; i < number_of_pages; i++){
-						struct BlockMetaData* before_last_page = (struct BlockMetaData*)((unsigned int)iterator + ((unsigned int)PAGE_SIZE * i));
-						//cprintf("free frames before: %d\n", sys_calculate_free_frames());
-						struct FrameInfo* new_frame = NULL;
-						//cprintf("%d frame allocated\n",i+1);
-						//cprintf("%d address2: %x\n", i + 1, before_last_page);
-						allocate_frame(&new_frame);
-						map_frame(ptr_page_directory, new_frame, (unsigned int)before_last_page, PERM_PRESENT|PERM_WRITEABLE);
-						//cprintf("free frames after: %d\n", sys_calculate_free_frames());
-						before_last_page->is_free = 0;
-						if(i == 0){
-							before_last_page->size = number_of_pages;
-						}
-						else{
-							before_last_page->size = PAGE_SIZE;
-						}
-
-						if(before_last_page == NULL){
-							cprintf("second null: %x\n", (unsigned int)LIST_LAST(&list_of_pages));
-							return NULL;
-						}
-						LIST_INSERT_AFTER(&list_of_pages, LIST_LAST(&list_of_pages), before_last_page);
 						num_of_pages_allocated++;
 					}
-					//cprintf("allocated pages: %d\n", num_of_pages_allocated);
+					struct BlockMetaData* free_pages = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&list_of_pages) + (unsigned int)PAGE_SIZE * number_of_pages);
+					struct FrameInfo* free_frame = NULL;
+					allocate_frame(&free_frame);
+					map_frame(ptr_page_directory, free_frame, (uint32)free_pages, PERM_PRESENT|PERM_WRITEABLE);
+					free_pages->size = num_of_pages_in_allocator - num_of_pages_allocated;
+					free_pages->is_free = 1;
+					LIST_INSERT_TAIL(&list_of_pages, free_pages);
+					return LIST_FIRST(&list_of_pages);
+
+				}
+				else{
+					struct BlockMetaData* iterator = LIST_FIRST(&list_of_pages);
+					uint32 new_address;
+					int j;
+					uint32 old_size;
+
+					for(j = 0; j < num_of_pages_in_allocator; j++){
+						iterator = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&list_of_pages) + ((unsigned int)PAGE_SIZE * j));
+						if(iterator->is_free == 1 && iterator->size > number_of_pages){
+							struct BlockMetaData* before_iter = (struct BlockMetaData*)((unsigned int)LIST_FIRST(&list_of_pages) + ((unsigned int)PAGE_SIZE * (j - 1)));
+							if(before_iter->size == 0){
+								new_address = (uint32)iterator;
+							}
+							else{
+								new_address = (unsigned int)before_iter + (before_iter->size * PAGE_SIZE);
+							}
+							old_size = iterator->size;
+							struct FrameInfo* frame_allocated = NULL;
+							allocate_frame(&frame_allocated);
+							map_frame(ptr_page_directory, frame_allocated, (unsigned int)iterator, PERM_PRESENT|PERM_WRITEABLE);
+							break;
+						}
+						else if(iterator->is_free == 1 && iterator->size == number_of_pages){
+							struct FrameInfo* frame_allocated = NULL;
+							allocate_frame(&frame_allocated);
+							map_frame(ptr_page_directory, frame_allocated, (unsigned int)iterator, PERM_PRESENT|PERM_WRITEABLE);
+							break;
+						}
+						else{
+							continue;
+						}
+						struct FrameInfo* frame_allocated = NULL;
+						allocate_frame(&frame_allocated);
+						map_frame(ptr_page_directory, frame_allocated, (unsigned int)iterator, PERM_PRESENT|PERM_WRITEABLE);
+
+					}
+
+					uint32 remaining_size = old_size - number_of_pages;
+					iterator = (struct BlockMetaData*)new_address;
+					for(unsigned int i = 0; i < number_of_pages; i++){
+
+						//cprintf("free frames after: %d\n", sys_calculate_free_frames());
+						if(i == 0){
+							iterator->size = number_of_pages;
+							iterator->is_free = 0;
+						}
+						else{
+							struct FrameInfo* new_frame = NULL;
+							allocate_frame(&new_frame);
+							map_frame(ptr_page_directory, new_frame, (uint32)iterator + ((unsigned int)PAGE_SIZE * i), PERM_PRESENT|PERM_WRITEABLE);
+						}
+						num_of_pages_allocated++;
+					}
+					if(remaining_size > 0){
+						struct BlockMetaData* free_pages = (struct BlockMetaData*)((unsigned int)iterator + ((unsigned int)PAGE_SIZE * number_of_pages));
+						struct FrameInfo* free_frame;
+						allocate_frame(&free_frame);
+						map_frame(ptr_page_directory, free_frame, (unsigned int)free_pages, PERM_PRESENT|PERM_WRITEABLE);
+						free_pages->size = remaining_size;
+						free_pages->is_free = 1;
+						LIST_INSERT_AFTER(&list_of_pages, iterator, free_pages);
+					}
 					return iterator;
 				}
 			}
@@ -420,8 +455,6 @@ void* kmalloc(unsigned int size)
 
 		}
 	}
-	//change this "return" according to your answer
-	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 	return NULL;
 }
 
