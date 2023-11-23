@@ -56,6 +56,7 @@ enum
 	SYS_free_user_mem,
 	SYS_brk,
     SYS_allocate_user_mem,
+	SYS_limit,
 	//=====================================================================
 	NSYSCALLS
 };

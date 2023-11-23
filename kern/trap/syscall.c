@@ -482,7 +482,6 @@ void* sys_sbrk(int increment)
 {
 	//TODO: [PROJECT'23.MS2 - #08] [2] USER HEAP - Block Allocator - sys_sbrk() [Kernel Side]
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
-	return (void*)-1 ;
 	//====================================================
 
 	/*2023*/
@@ -505,8 +504,52 @@ void* sys_sbrk(int increment)
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
+	uint32 previous_break= env->segment_break;
+		if(increment>0 && increment <(env->segment_break -env->segment_break)){
+			if (increment % PAGE_SIZE==0){
+				env->segment_break += increment;
+				return (void*) previous_break;
+			}
+			else{
+				int counter=0;
+				for(int i=increment; i%PAGE_SIZE!=0; i++){
+						counter++;
+				}
+				env->segment_break += (increment+counter);
+				return (void*) previous_break;
+			}
+		}
+		else if(increment == 0){
+			return (void*) env->segment_break;
+		}
+		else{
+			env->segment_break +=increment;
+			if((uint32)increment < PAGE_SIZE){
+				if(env->segment_break % PAGE_SIZE ==0){
+					unmap_frame(ptr_page_directory,previous_break);
+				}
+			}
 
+			else if((uint32)increment > PAGE_SIZE){
+				int noOfPages= (uint32)increment/PAGE_SIZE;
+				for(int i=0;i<noOfPages;i++){
+					unmap_frame(ptr_page_directory,previous_break);
+					previous_break-=PAGE_SIZE;
+				}
+			}
+			else{
+				unmap_frame(ptr_page_directory,previous_break);
+			}
+			return (void*) env->segment_break;
+		}
+		if(increment > (env->segment_break - env->hard_limit|| env->segment_break ==USER_HEAP_MAX)) {
+				return(void*) -1;
+		}
 
+}
+void* sys_limit(){
+	uint32 address = curenv->hard_limit;
+	return (void*)address;
 }
 
 /**************************************************************************/
@@ -524,6 +567,9 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	case SYS_brk:
 		sys_sbrk(a1);
 		break;
+	case SYS_limit:
+	    sys_limit();
+	    break;
 	case SYS_free_user_mem:
 		if(a1+16*256 >= USER_LIMIT){
 			sched_kill_env(curenv->env_id);

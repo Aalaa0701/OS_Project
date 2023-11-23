@@ -378,6 +378,18 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'23.MS2 - #13] [3] PAGE FAULT HANDLER - Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
+			unsigned int * t1;
+			  get_page_table(ptr_page_directory, fault_va, &t1);
+			  uint32 perm = t1[PTX(fault_va)] & 0xFFF;
+			  if ((perm & ~PERM_USER) == PERM_USER){
+				sched_kill_env(curenv->env_id);
+			  }
+			  else if ((perm & PERM_WRITEABLE) != PERM_WRITEABLE){
+				sched_kill_env(curenv->env_id);
+			  }
+			  else if ((perm & ~PERM_AVAILABLE) && (perm & PERM_PRESENT)){
+				sched_kill_env(curenv->env_id);
+			  }
 
 			/*============================================================================================*/
 		}

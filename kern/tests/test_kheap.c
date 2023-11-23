@@ -1674,7 +1674,6 @@ int test_kheap_virt_addr()
 		if ((sys_calculate_free_frames() - freeFrames) < 6*Mega/4096) { correct = 0; cprintf("Wrong kfree: pages in memory are not freed correctly\n"); }
 	}
 
-
 	//test kheap_virtual_address after kmalloc and kfree [20%]
 	{
 		uint32 va;
@@ -1690,7 +1689,7 @@ int test_kheap_virt_addr()
 			if (retrievedVA != 0)
 			{
 				if (correct)
-				{ correct = 0; cprintf("Wrong kheap_virtual_address\n"); }
+				{ correct = 0; cprintf("Wrong kheap_virtual_address \n"); }
 			}
 
 		}
@@ -1701,7 +1700,7 @@ int test_kheap_virt_addr()
 			if (retrievedVA != ((startVA + i*PAGE_SIZE) + (allPAs[i] & 0xFFF)))
 			{
 				if (correct)
-				{ correct = 0; cprintf("Wrong kheap_virtual_address\n"); }
+				{ correct = 0; cprintf("Wrong kheap_virtual_address \n"); }
 			}
 		}
 		//frames of 6 MB
@@ -1711,7 +1710,7 @@ int test_kheap_virt_addr()
 			if (retrievedVA != 0)
 			{
 				if (correct)
-				{ correct = 0; cprintf("Wrong kheap_virtual_address\n"); }
+				{ correct = 0; cprintf("Wrong kheap_virtual_address \n"); }
 			}
 		}
 		//frames of last allocation (14 KB)
@@ -4822,6 +4821,8 @@ int test_krealloc_BF() {
 		freeFrames = sys_calculate_free_frames();
 		ptr_allocations[0] = krealloc(NULL, 1 * Mega - kilo);
 		if ((uint32) ptr_allocations[0] < (KERNEL_HEAP_START))
+			cprintf("address returned: %x\n", ptr_allocations[0]);
+			cprintf("address returned: %x\n", (KERNEL_HEAP_START));
 			panic("krealloc: Wrong start address for the allocated space... ");
 		if ((uint32) ptr_allocations[0] != ACTUAL_START)
 			panic("krealloc: Wrong start address for allocated space");

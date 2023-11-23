@@ -3,7 +3,8 @@
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
-
+#define pages_in_user_heap (((unsigned int)USER_HEAP_MAX - ((unsigned int)USER_HEAP_START + (unsigned int)DYN_ALLOC_MAX_SIZE) + (unsigned int)PAGE_SIZE)/PAGE_SIZE)
+uint32 pages_allocated_in_uheap = 0;
 int FirstTimeFlag = 1;
 void InitializeUHeap()
 {
@@ -42,7 +43,71 @@ void* malloc(uint32 size)
 	//==============================================================
 	//TODO: [PROJECT'23.MS2 - #09] [2] USER HEAP - malloc() [User Side]
 	// Write your code here, remove the panic and write your code
-	panic("malloc() is not implemented yet...!!");
+	if(sys_isUHeapPlacementStrategyFIRSTFIT()){
+		if(size <= (unsigned int)DYN_ALLOC_MAX_BLOCK_SIZE){
+			struct BlockMetaData* v_address = alloc_block_FF(size);
+			return v_address;
+		}
+		else{
+			uint32 requested_pages;
+			if(size % PAGE_SIZE == 0){
+				requested_pages = size / PAGE_SIZE;
+			}
+			else{
+				requested_pages = (size / PAGE_SIZE) + 1;
+			}
+			if(requested_pages > pages_in_user_heap - pages_allocated_in_uheap){
+				return NULL;
+			}
+			else{
+				struct Pages* v_address = NULL;
+				if(LIST_FIRST(&list_of_pages) == NULL){
+					struct Pages* first_page = (struct Pages*)(((unsigned int)USER_HEAP_START + (unsigned int)DYN_ALLOC_MAX_SIZE + (unsigned int)PAGE_SIZE));
+					first_page->is_free = 0;
+					first_page->size = requested_pages;
+					v_address = first_page;
+					LIST_INSERT_HEAD(&list_of_pages, first_page);
+					pages_allocated_in_uheap += requested_pages;
+					struct Pages* last_block = (struct Pages*)((unsigned int)LIST_FIRST(&list_of_pages)+ ((unsigned int)PAGE_SIZE * requested_pages));
+					last_block->is_free = 1;
+					last_block->size = pages_in_user_heap - requested_pages;
+					LIST_INSERT_TAIL(&list_of_pages, last_block);
+					sys_allocate_user_mem((uint32)v_address, requested_pages);
+					return v_address;
+				}
+				else{
+					struct Pages* iterator;
+					LIST_FOREACH(iterator, &list_of_pages){
+						if(iterator->is_free == 1 && iterator->size > requested_pages){
+							uint32 old_size = iterator->size;
+							iterator->is_free = 0;
+							iterator->size = requested_pages;
+							struct Pages* free_block = (struct Pages*)(((unsigned int)iterator + ((unsigned int)PAGE_SIZE * requested_pages)));
+							free_block->is_free = 1;
+							free_block->size = old_size - requested_pages;
+							LIST_INSERT_AFTER(&list_of_pages, iterator, free_block);
+							v_address = iterator;
+							sys_allocate_user_mem((uint32)v_address, requested_pages);
+							return v_address;
+						}
+						else if(iterator->is_free == 1 && iterator->size == requested_pages){
+							iterator->is_free = 0;
+							iterator->size = requested_pages;
+							v_address = iterator;
+							sys_allocate_user_mem((uint32)v_address, requested_pages);
+							return v_address;
+						}
+						else{
+							continue;
+						}
+					}
+					cprintf("not found\n");
+					return NULL;
+				}
+			}
+		}
+	}
+	//panic("malloc() is not implemented yet...!!");
 	return NULL;
 	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
 	//to check the current strategy
@@ -56,7 +121,102 @@ void free(void* virtual_address)
 {
 	//TODO: [PROJECT'23.MS2 - #11] [2] USER HEAP - free() [User Side]
 	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
+	//case address out of range
+	if((uint32)virtual_address < (uint32)USER_HEAP_START || (uint32)virtual_address >= (uint32)USER_HEAP_MAX){
+		panic("not a valid address\n");
+	}
+	//case address in block allocator range
+	if((uint32)virtual_address >= (uint32)USER_HEAP_START && (uint32)virtual_address < (uint32)USER_HEAP_START + DYN_ALLOC_MAX_SIZE){
+		free_block(virtual_address);
+	}
+	//case address in page allocator range
+	else if((uint32)virtual_address >= ((uint32)USER_HEAP_START + (uint32)DYN_ALLOC_MAX_SIZE + (uint32)PAGE_SIZE) && (uint32)virtual_address < (uint32)USER_HEAP_MAX){
+		struct Pages* pages_deleted = (struct Pages*)virtual_address;
+		struct Pages* prev_pages;
+		struct Pages* next_pages;
+		if(pages_deleted == LIST_FIRST(&list_of_pages)){
+			next_pages = pages_deleted->prev_next_info.le_next;
+		}
+		else if(pages_deleted == LIST_LAST(&list_of_pages)){
+			prev_pages = pages_deleted->prev_next_info.le_prev;
+		}
+		else{
+			next_pages = pages_deleted->prev_next_info.le_next;
+			prev_pages = pages_deleted->prev_next_info.le_prev;
+		}
+		//free logic
+
+		//case 1 first element
+		if(pages_deleted == LIST_FIRST(&list_of_pages)){
+			//case next free
+			if(next_pages->is_free == 1){
+				pages_deleted->size += next_pages->size;
+				pages_deleted->is_free = 1;
+				struct Pages* next_of_next = next_pages->prev_next_info.le_next;
+				next_pages->is_free = 0;
+				next_pages->size = 0;
+				pages_deleted->prev_next_info.le_next = next_of_next;
+				next_of_next->prev_next_info.le_prev = pages_deleted;
+			}
+			//case next not free
+			else{
+				pages_deleted->is_free = 1;
+			}
+		}
+
+		//case 2 last element
+		else if(pages_deleted == LIST_LAST(&list_of_pages)){
+			//case prev free
+			if(prev_pages->is_free == 1){
+				prev_pages->size += pages_deleted->size;
+				pages_deleted->is_free = 0;
+				pages_deleted->size = 0;
+				prev_pages->prev_next_info.le_next = NULL;
+			}
+			//case prev not free
+			else{
+				pages_deleted->is_free = 1;
+			}
+		}
+
+		//case 3 middle
+		else{
+			//case prev and next not free
+			if(prev_pages->is_free == 0 && next_pages->is_free == 0){
+				pages_deleted->is_free = 1;
+			}
+			//case prev free and next not free
+			else if(prev_pages->is_free == 1 && next_pages->is_free == 0){
+				prev_pages->size += pages_deleted->size;
+				pages_deleted->is_free = 0;
+				pages_deleted->size = 0;
+				prev_pages->prev_next_info.le_next = next_pages;
+			}
+			//case prev not free and next free
+			else if(prev_pages->is_free == 0 && next_pages->is_free == 1){
+				struct Pages* next_of_next = next_pages->prev_next_info.le_next;
+				pages_deleted->size += next_pages->size;
+				pages_deleted->is_free = 1;
+				next_pages->is_free = 0;
+				next_pages->size = 0;
+				pages_deleted->prev_next_info.le_next = next_of_next;
+				next_of_next->prev_next_info.le_prev = pages_deleted;
+			}
+			//case prev and next free
+			else if(prev_pages->is_free == 1 && next_pages->is_free == 1){
+				struct Pages* next_of_next = next_pages->prev_next_info.le_next;
+				prev_pages->size += (pages_deleted->size + next_pages->size);
+				pages_deleted->is_free = 0;
+				pages_deleted->size = 0;
+				next_pages->is_free = 0;
+				next_pages->size = 0;
+				prev_pages->prev_next_info.le_next = next_of_next;
+				next_of_next->prev_next_info.le_prev = prev_pages;
+			}
+		}
+
+		sys_free_user_mem((uint32)virtual_address, pages_deleted->size);
+	}
 }
 
 

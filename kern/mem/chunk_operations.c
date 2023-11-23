@@ -120,12 +120,20 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	/*=============================================================================*/
 	//TODO: [PROJECT'23.MS2 - #10] [2] USER HEAP - allocate_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
-	inctst();
-	return;
+	//inctst();
+	//return;
 	/*=============================================================================*/
+	uint32* page_table_ptr = NULL;
+	if(get_page_table(e->env_page_directory, virtual_address, &page_table_ptr) == TABLE_NOT_EXIST){
+		create_page_table(e->env_page_directory, virtual_address);
+	}
+	for(int i = 0; i < size; i++){
+		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+	}
 
 	// Write your code here, remove the panic and write your code
-	panic("allocate_user_mem() is not implemented yet...!!");
+
+
 }
 
 //=====================================
@@ -136,12 +144,17 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	/*==========================================================================*/
 	//TODO: [PROJECT'23.MS2 - #12] [2] USER HEAP - free_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
-	inctst();
-	return;
+	//inctst();
+	//return;
 	/*==========================================================================*/
 
 	// Write your code here, remove the panic and write your code
-	panic("free_user_mem() is not implemented yet...!!");
+	//unmark pages , remove from page file, remove from WS
+	for(int i = 0; i < size; i++){
+		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE);
+		pf_remove_env_page(e, virtual_address + (i * (unsigned int)PAGE_SIZE));
+		env_page_ws_invalidate(e, virtual_address + (i * (unsigned int)PAGE_SIZE));
+	}
 
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
 
@@ -173,4 +186,3 @@ void move_user_mem(struct Env* e, uint32 src_virtual_address, uint32 dst_virtual
 //=================================================================================//
 //========================== END USER CHUNKS MANIPULATION =========================//
 //=================================================================================//
-

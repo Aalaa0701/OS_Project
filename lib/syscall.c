@@ -356,4 +356,9 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	//panic("not implemented yet");
 	syscall(SYS_allocate_user_mem, (uint32)virtual_address, (uint32)size, 0,0,0);
 }
+void* sys_limit()
+{
+  syscall(SYS_limit,0,0,0,0,0);
+  return (void*)-1;
+}
 
