@@ -150,6 +150,7 @@ void* kmalloc(unsigned int size)
 		else{
 			// get number of frames required
 			uint32 number_of_pages;
+
 			if(size % (uint32)PAGE_SIZE == 0){
 				number_of_pages = size / (uint32)PAGE_SIZE;
 			}
@@ -195,6 +196,7 @@ void* kmalloc(unsigned int size)
 							break;
 						}
 						else{
+							found_address = (uint32)start_address + ((uint32)PAGE_SIZE * i);
 							break;
 						}
 					}

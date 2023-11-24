@@ -89,15 +89,25 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		//TODO: [PROJECT'23.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
 		// Write your code here, remove the panic and write your code
 		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+		cprintf("placement\n");
 		uint32 *ptr_page_table;
 		struct Env* e = NULL;
-		struct FrameInfo* ptr_frame_info = get_frame_info(ptr_page_directory,fault_va,&ptr_page_table);
+		//check present
+		//check user
+
+		//struct FrameInfo* ptr_frame_info = get_frame_info(ptr_page_directory,fault_va,&ptr_page_table);
+		struct FrameInfo* ptr_frame_info = NULL;
 		int allocnewframe = allocate_frame(&ptr_frame_info);
-		map_frame(e->env_page_directory,ptr_frame_info,fault_va,PERM_USER | PERM_WRITEABLE | PERM_AVAILABLE | PERM_PRESENT);
+		cprintf("before map frame\n");
+		//map_frame(e->env_page_directory, ptr_frame_info, fault_va, PERM_WRITEABLE|PERM_USER|PERM_PRESENT);
+		//cprintf("after map frame\n");
 		// permission
+
 		int readc = pf_read_env_page(curenv,(void*)fault_va);
 		if (readc == E_PAGE_NOT_EXIST_IN_PF){
-		  if(fault_va >= USER_HEAP_START && fault_va <= USER_HEAP_MAX){
+			cprintf("not in page file\n");
+		  if(fault_va >= (uint32)USER_HEAP_START && fault_va <= (uint32)USER_HEAP_MAX){
+			  cprintf("user heap\n");
 			pf_update_env_page(curenv,fault_va,ptr_frame_info);
 			env_page_ws_list_create_element(curenv,fault_va);
 
@@ -111,7 +121,8 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 			  LIST_INSERT_TAIL(&e->page_WS_list,env_page_ws_list_create_element(curenv,fault_va));
 			}
 		  }
-		  else if (fault_va <= USER_HEAP_MAX && fault_va <= USTACKTOP){
+		  else if (fault_va >= USTACKBOTTOM && fault_va <= USTACKTOP){
+			  cprintf("user stack\n");
 			pf_update_env_page(curenv,fault_va,ptr_frame_info);
 			env_page_ws_list_create_element(curenv,fault_va);
 
@@ -126,6 +137,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 			}
 		  }
 		  else {
+			  cprintf("not in page file/heap/stack\n");
 			sched_kill_env(curenv->env_id);
 		  }
 		}

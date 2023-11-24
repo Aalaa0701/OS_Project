@@ -35,7 +35,7 @@ struct UserProgramInfo userPrograms[] = {
 		{ "tf1_slave1", "tests free (1) slave1: try accessing values in freed spaces", PTR_START_OF(tst_free_1_slave1)},
 		{ "tf1_slave2", "tests free (1) slave2: try accessing values in freed spaces that is not accessed before", PTR_START_OF(tst_free_1_slave2)},
 		{ "tf2", "tests free (2): BLOCK ALLOCATOR", PTR_START_OF(tst_free_2)},
-		
+
 		{ "tff1", "tests first fit (1): PAGE ALLOCATOR", PTR_START_OF(tst_first_fit_1)},
 		{ "tff2", "tests first fit (2): BLOCK ALLOCATOR", PTR_START_OF(tst_first_fit_2)},
 		{ "tpp", "Tests the Page placement", PTR_START_OF(tst_placement)},

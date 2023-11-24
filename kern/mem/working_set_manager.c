@@ -18,15 +18,21 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	//TODO: [PROJECT'23.MS2 - #14] [3] PAGE FAULT HANDLER - Create a new working set element
 	// Write your code here, remove the panic and write your code
 	//panic("env_page_ws_list_create_element() is not implemented yet...!!");
-	struct WorkingSetElement *obj_ws;
-	  obj_ws = (void*)virtual_address;
-	  if (e->page_last_WS_index == e->page_WS_max_size){
-	    panic("Kernel panic");
+	void* returned_address = kmalloc(sizeof(struct WorkingSetElement));
+	  if(returned_address == NULL){
+		  panic("Kernel panic");
 	  }
-	  else {
-		  return obj_ws;
+	  if (e->page_last_WS_index == e->page_WS_max_size || LIST_SIZE(&(e->page_WS_list)) == e->page_WS_max_size
+			  || e->page_last_WS_element != NULL){
+		panic("Kernel panic");
 	  }
-	return NULL;
+	  struct WorkingSetElement* obj_ws;
+	 obj_ws = (struct WorkingSetElement*)returned_address;
+	obj_ws->empty = 0;
+	obj_ws->sweeps_counter = 0;
+	obj_ws->time_stamp = 0;
+	  obj_ws->virtual_address = virtual_address;
+	  return obj_ws;
 }
 inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 {

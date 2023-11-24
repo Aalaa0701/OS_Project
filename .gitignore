@@ -1,2 +1,5 @@
 # /bochs.log
 obj/
+user/.autotools
+user/.cproject
+user/.project

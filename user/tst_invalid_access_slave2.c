@@ -6,6 +6,7 @@
 
 void _main(void)
 {
+	cprintf("2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	//[1] User address but READ-ONLY
 	uint32 *ptr = (uint32*)USER_TOP;
 	*ptr = 100 ;

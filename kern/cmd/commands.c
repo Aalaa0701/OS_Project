@@ -439,7 +439,6 @@ struct Env * CreateEnv(int number_of_arguments, char **arguments)
 #endif
 	assert(percent_WS_pages_to_remove >= 0 && percent_WS_pages_to_remove <= 100);
 	env = env_create(arguments[1], pageWSSize, LRUSecondListSize, percent_WS_pages_to_remove);
-
 	return env;
 }
 
@@ -447,7 +446,6 @@ int command_run_program(int number_of_arguments, char **arguments)
 {
 	//[1] Create and initialize a new environment for the program to be run
 	struct Env *env = CreateEnv(number_of_arguments, arguments);
-
 	if(env == NULL) return 0;
 	cprintf("\nEnvironment Id= %d\n",env->env_id);
 

@@ -150,6 +150,33 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 
 	// Write your code here, remove the panic and write your code
 	//unmark pages , remove from page file, remove from WS
+//	int res = pf_read_env_page(&e,virtual_address);
+//
+//		 if (res == 0)
+//		 {
+//			 int num_of_pages =ceil(size/PAGE_SIZE);
+//			 uint32 virt = ROUNDDOWN(virtual_address, PAGE_SIZE);
+//
+//			 //unmark
+//			 //page_index = (start_address + i * sizeof(PageTableEntry)) / 4096;
+//			 uint32 *ptr_page_table = NULL;
+//			 for(int i=0;i<num_of_pages;i++)
+//			 {
+//				 get_page_table(ptr_page_directory, virt, &ptr_page_table);
+//				 if (ptr_page_table != NULL)
+//				 {
+//					 ptr_page_table[PTX(virt)] = ptr_page_table[PTX(virt)] & (~PERM_PRESENT);
+//				 }
+//
+//				 //free from disk
+//				 pf_remove_env_page(&e, virt);
+//				 //free from working set
+//				 env_page_ws_invalidate(&e,virt);
+//
+//				 ptr_page_table++;
+//			 }
+//		 }else
+//			 return;
 	for(int i = 0; i < size; i++){
 		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE);
 		pf_remove_env_page(e, virtual_address + (i * (unsigned int)PAGE_SIZE));
