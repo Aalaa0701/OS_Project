@@ -309,6 +309,7 @@ uint32 last_fault_va = 0;
 int8 num_repeated_fault  = 0;
 void fault_handler(struct Trapframe *tf)
 {
+
 	int userTrap = 0;
 	if ((tf->tf_cs & 3) == 3) {
 		userTrap = 1;
@@ -317,7 +318,6 @@ void fault_handler(struct Trapframe *tf)
 
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();
-
 	//	cprintf("Faulted VA = %x\n", fault_va);
 	//	print_trapframe(tf);
 
@@ -385,13 +385,11 @@ void fault_handler(struct Trapframe *tf)
 					 sched_kill_env(curenv->env_id);
 				 }
 			 }
-			unsigned int * t1;
-			  get_page_table(ptr_page_directory, fault_va, &t1);
-			  uint32 perm = t1[PTX(fault_va)] & 0xFFF;
-			  if ((perm & PERM_USER) != PERM_USER){
+			unsigned int permission = pt_get_page_permissions(ptr_page_directory, fault_va);
+			  if ((permission & PERM_USER) != PERM_USER){
 				sched_kill_env(curenv->env_id);
 			  }
-			  else if ((perm & PERM_WRITEABLE) != PERM_WRITEABLE && (perm & PERM_PRESENT)){
+			  else if ((permission & PERM_WRITEABLE) != PERM_WRITEABLE && (permission & PERM_PRESENT)){
 				sched_kill_env(curenv->env_id);
 			  }
 

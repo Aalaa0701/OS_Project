@@ -99,7 +99,6 @@ void _main(void)
 				0x200000,0x201000,0x202000,0x203000,0x204000,0x205000,0x206000,0x207000,
 				0x800000,0x801000,0x802000,0x803000,
 				0xeebfd000,0xedbfd000,0xedbfe000,0xedffd000,0xedffe000,0xee3fd000,0xee3fe000,0xee7fd000};
-
 		found = sys_check_WS_list(expectedPages, 20, 0x200000, 1);
 		if (found != 1)
 			panic("PAGE WS entry checking failed... trace it by printing page WS before & after fault");
