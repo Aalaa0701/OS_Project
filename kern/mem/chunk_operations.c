@@ -120,14 +120,24 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	/*=============================================================================*/
 	//TODO: [PROJECT'23.MS2 - #10] [2] USER HEAP - allocate_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
-	//inctst();
-	//return;
 	/*=============================================================================*/
+	cprintf("enter allocate user mem\n");
 	uint32* page_table_ptr = NULL;
-	if(get_page_table(e->env_page_directory, virtual_address, &page_table_ptr) == TABLE_NOT_EXIST){
-		create_page_table(e->env_page_directory, virtual_address);
+	cprintf("in sys allocate\n");
+	cprintf("address sent: %x\n", virtual_address);
+	int result = get_page_table(e->env_page_directory, virtual_address, &page_table_ptr);
+	if(result == TABLE_IN_MEMORY){
+		cprintf("page table exist\n");
+	}
+	if(result == TABLE_NOT_EXIST){
+		cprintf("page table not exist\n");
+		void* returned_address = kmalloc(PAGE_SIZE);
+		cprintf("returned address: %x\n", returned_address);
+		page_table_ptr = create_page_table(e->env_page_directory, virtual_address);
+		cprintf("after create page table\n");
 	}
 	for(int i = 0; i < size; i++){
+		cprintf("set page permissions\n");
 		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
 	}
 

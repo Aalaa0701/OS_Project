@@ -296,6 +296,11 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 {
 	_UHeapPlacementStrategy = heapStrategy;
 }
+
+uint32 sys_get_permissions(uint32 virtual_address){
+	uint32 perm = pt_get_page_permissions(curenv->env_page_directory, virtual_address);
+	return perm;
+}
 /*******************************/
 /* INTERRUPTS SYSTEM CALLS */
 /*******************************/
@@ -552,6 +557,7 @@ void* sys_limit(){
 	return (void*)address;
 }
 
+
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
 /**************************************************************************/
@@ -564,6 +570,9 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	{
 	/*2023*/
 	//TODO: [PROJECT'23.MS1 - #4] [2] SYSTEM CALLS - Add suitable code here
+	case SYS_get_permissions:
+		return sys_get_permissions(a1);
+		break;
 	case SYS_brk:
 		sys_sbrk(a1);
 		break;
@@ -596,7 +605,7 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sched_kill_env(curenv->env_id);
 		}
 		else {
-			sys_free_user_mem(a1, a2);
+			sys_allocate_user_mem(a1, a2);
 		}
 		break;
 

@@ -85,6 +85,8 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 
 	if(wsSize < (curenv->page_WS_max_size))
 	{
+		cprintf("placement\n");
+		cprintf("fault address: %x\n");
 		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
 		//TODO: [PROJECT'23.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
 		// Write your code here, remove the panic and write your code
@@ -95,9 +97,15 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		int allocnewframe = allocate_frame(&ptr_frame_info);
 		map_frame(curenv->env_page_directory, ptr_frame_info, new_va, PERM_WRITEABLE|PERM_USER|PERM_PRESENT);
 		// permission
+		unsigned int permissions = pt_get_page_permissions(curenv->env_page_directory, fault_va);
 		int readc = pf_read_env_page(curenv,(void*)new_va);
 		if (readc == E_PAGE_NOT_EXIST_IN_PF){
 		  if(new_va >= (uint32)USER_HEAP_START && new_va <= (uint32)USER_HEAP_MAX){
+			  cprintf("in user area\n");
+			  if((permissions & PERM_AVAILABLE) != PERM_AVAILABLE){
+				  cprintf("will kill in user\n");
+					 sched_kill_env(curenv->env_id);
+				 }
 			struct WorkingSetElement* element = env_page_ws_list_create_element(curenv,new_va);
 			LIST_INSERT_TAIL(&(curenv->page_WS_list), element);
 			if(LIST_SIZE(&(curenv->page_WS_list)) == curenv->page_WS_max_size){
@@ -112,6 +120,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 			}
 		  }
 		  else {
+			  cprintf("not in stack or heap\n");
 			  unmap_frame(curenv->env_page_directory, new_va);
 			sched_kill_env(curenv->env_id);
 		  }

@@ -353,12 +353,15 @@ void sys_free_user_mem(uint32 virtual_address, uint32 size)
 void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 {
 	//Comment the following line before start coding...
-	//panic("not implemented yet");
 	syscall(SYS_allocate_user_mem, (uint32)virtual_address, (uint32)size, 0,0,0);
 }
 void* sys_limit()
 {
   syscall(SYS_limit,0,0,0,0,0);
   return (void*)-1;
+}
+
+uint32 sys_get_permissions(uint32 virtual_address){
+	return syscall(SYS_get_permissions, virtual_address, 0, 0, 0, 0);
 }
 

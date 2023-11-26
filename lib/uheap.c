@@ -36,6 +36,7 @@ void* sbrk(int increment)
 //=================================
 void* malloc(uint32 size)
 {
+	cprintf("in malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	InitializeUHeap();
@@ -60,50 +61,54 @@ void* malloc(uint32 size)
 				return NULL;
 			}
 			else{
-				struct Pages* v_address = NULL;
-				if(LIST_FIRST(&list_of_pages) == NULL){
-					struct Pages* first_page = (struct Pages*)(((unsigned int)USER_HEAP_START + (unsigned int)DYN_ALLOC_MAX_SIZE + (unsigned int)PAGE_SIZE));
-					first_page->is_free = 0;
-					first_page->size = requested_pages;
-					v_address = first_page;
-					LIST_INSERT_HEAD(&list_of_pages, first_page);
-					pages_allocated_in_uheap += requested_pages;
-					struct Pages* last_block = (struct Pages*)((unsigned int)LIST_FIRST(&list_of_pages)+ ((unsigned int)PAGE_SIZE * requested_pages));
-					last_block->is_free = 1;
-					last_block->size = pages_in_user_heap - requested_pages;
-					LIST_INSERT_TAIL(&list_of_pages, last_block);
-					sys_allocate_user_mem((uint32)v_address, requested_pages);
-					return v_address;
-				}
-				else{
-					struct Pages* iterator;
-					LIST_FOREACH(iterator, &list_of_pages){
-						if(iterator->is_free == 1 && iterator->size > requested_pages){
-							uint32 old_size = iterator->size;
-							iterator->is_free = 0;
-							iterator->size = requested_pages;
-							struct Pages* free_block = (struct Pages*)(((unsigned int)iterator + ((unsigned int)PAGE_SIZE * requested_pages)));
-							free_block->is_free = 1;
-							free_block->size = old_size - requested_pages;
-							LIST_INSERT_AFTER(&list_of_pages, iterator, free_block);
-							v_address = iterator;
-							sys_allocate_user_mem((uint32)v_address, requested_pages);
-							return v_address;
+				uint32 start_address = USER_HEAP_START + DYN_ALLOC_MAX_SIZE;
+				uint32 found_address = 0;
+				for(int i = 0; i < pages_in_user_heap; i++){
+					uint32 iteration_address = start_address + ((uint32)PAGE_SIZE * i);
+					uint32 permissions = sys_get_permissions(iteration_address);
+					uint32 num_of_free_pages = 0;
+					if((permissions & PERM_AVAILABLE) != PERM_AVAILABLE){
+						num_of_free_pages++;
+						int m = 1;
+						while(1 == 1){
+							uint32 next_permissions = sys_get_permissions(start_address + ((uint32)PAGE_SIZE * i) + ((uint32)PAGE_SIZE * m));
+							if((next_permissions & PERM_AVAILABLE) != PERM_AVAILABLE){
+								m++;
+								num_of_free_pages++;
+								if(num_of_free_pages == requested_pages){
+									found_address = start_address + ((uint32)PAGE_SIZE * i);
+									break;
+								}
+							}
+							else{
+								break;
+							}
 						}
-						else if(iterator->is_free == 1 && iterator->size == requested_pages){
-							iterator->is_free = 0;
-							iterator->size = requested_pages;
-							v_address = iterator;
-							sys_allocate_user_mem((uint32)v_address, requested_pages);
-							return v_address;
-						}
-						else{
+						if(num_of_free_pages < requested_pages){
+							i += m;
 							continue;
 						}
+						else if(num_of_free_pages == requested_pages){
+							found_address = start_address + ((uint32)PAGE_SIZE * i);
+							break;
+						}
+						else{
+							found_address = (uint32)start_address + ((uint32)PAGE_SIZE * i);
+							break;
+						}
 					}
-					cprintf("not found\n");
-					return NULL;
+					else{
+						continue;
+					}
 				}
+				if(found_address != 0){
+					//assign page and mark it
+					sys_allocate_user_mem(found_address, requested_pages);
+					struct Pages* new_page = (struct Pages*)found_address;
+					new_page->size = requested_pages;
+					return (void*)found_address;
+				}
+
 			}
 		}
 	}
