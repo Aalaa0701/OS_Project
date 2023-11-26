@@ -379,10 +379,10 @@ void fault_handler(struct Trapframe *tf)
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
 			//check if it is in user heap
-			unsigned int permission = pt_get_page_permissions(ptr_page_directory, fault_va);
-//			cprintf("address: %x\n", fault_va);
-//			cprintf("perm: %x\n", permission);
-			  if ((permission & PERM_USER) != PERM_USER){
+			//cprintf("faulted va in trap: %x\n", fault_va);
+			unsigned int permission = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+			cprintf("faulted va in trap: %x\n", fault_va);
+			  if ((permission & PERM_USER) != PERM_USER && (permission & PERM_PRESENT)){
 				  cprintf("kernel\n");
 				sched_kill_env(curenv->env_id);
 			  }

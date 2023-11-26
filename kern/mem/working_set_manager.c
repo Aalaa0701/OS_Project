@@ -28,7 +28,7 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	  }
 	  struct WorkingSetElement* obj_ws;
 	 obj_ws = (struct WorkingSetElement*)returned_address;
-	obj_ws->empty = 0;
+	//obj_ws->empty = 0;
 	obj_ws->sweeps_counter = 0;
 	obj_ws->time_stamp = 0;
 	  obj_ws->virtual_address = virtual_address;

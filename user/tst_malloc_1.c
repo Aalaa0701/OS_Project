@@ -65,18 +65,26 @@ void _main(void)
 			freeFrames = sys_calculate_free_frames() ;
 			usedDiskPages = sys_pf_calculate_allocated_pages() ;
 			ptr_allocations[0] = malloc(2*Mega-kilo);
-			if ((uint32) ptr_allocations[0] != (pagealloc_start)) panic("Wrong start address for the allocated space... ");
+			if ((uint32) ptr_allocations[0] != (pagealloc_start)) {
+				cprintf("actual: %x\n", (uint32) ptr_allocations[0]);
+				cprintf("expected: %x\n", (pagealloc_start));
+				panic("Wrong start address for the allocated space... ");}
 			if ((freeFrames - sys_calculate_free_frames()) >= 512) panic("Wrong allocation: pages are allocated in memory while it's not supposed to!");
 			if ((sys_pf_calculate_allocated_pages() - usedDiskPages) != 0) panic("Extra or less pages are allocated in PageFile");
 
 
 			freeFrames = sys_calculate_free_frames() ;
+			cprintf("free frames: %d\n", freeFrames);
 			lastIndexOfByte = (2*Mega-kilo)/sizeof(char) - 1;
 			byteArr = (char *) ptr_allocations[0];
+			cprintf("bytearr ALl : %x\n", byteArr);
 			byteArr[0] = minByte ;
+			cprintf("bytearr 0 ->1 : %x\n", byteArr[0]);
 			byteArr[lastIndexOfByte] = maxByte ;
+			cprintf("bytearr 1 ->2 : %x\n", byteArr[lastIndexOfByte]);
 			expectedNumOfFrames = 2 /*+1 table already created in malloc due to marking the allocated pages*/ ;
 			actualNumOfFrames = (freeFrames - sys_calculate_free_frames()) ;
+			cprintf("free frames 2: %d\n", sys_calculate_free_frames());
 			if (actualNumOfFrames < expectedNumOfFrames)
 				panic("Wrong fault handler: pages are not loaded successfully into memory/WS. Expected diff in frames at least = %d, actual = %d\n", expectedNumOfFrames, actualNumOfFrames);
 
@@ -91,7 +99,12 @@ void _main(void)
 			freeFrames = sys_calculate_free_frames() ;
 			usedDiskPages = sys_pf_calculate_allocated_pages() ;
 			ptr_allocations[1] = malloc(2*Mega-kilo);
-			if ((uint32) ptr_allocations[1] != (pagealloc_start + 2*Mega)) panic("Wrong start address for the allocated space... ");
+			if ((uint32) ptr_allocations[1] != (pagealloc_start + 2*Mega)){
+				cprintf("actual: %x\n", (uint32) ptr_allocations[1]);
+				cprintf("expected: %x\n", (pagealloc_start + 2*Mega));
+				panic("Wrong start address for the allocated space... ");
+
+			}
 			if ((freeFrames - sys_calculate_free_frames()) >= 512) panic("Wrong allocation: pages are allocated in memory while it's not supposed to!");
 			if ((sys_pf_calculate_allocated_pages() - usedDiskPages) != 0) panic("Extra or less pages are allocated in PageFile");
 

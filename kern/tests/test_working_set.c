@@ -153,6 +153,8 @@ int sys_check_WS_list(uint32* WS_list_content, int actual_WS_list_size, uint32 l
 			{
 				if (ROUNDDOWN(ptr_WS_element->virtual_address, PAGE_SIZE) == ROUNDDOWN(WS_list_content[idx_expected_list], PAGE_SIZE))
 				{
+					//cprintf("actual %x expected %x\n",ROUNDDOWN(ptr_WS_element->virtual_address, PAGE_SIZE),ROUNDDOWN(WS_list_content[idx_expected_list], PAGE_SIZE));
+					cprintf("\nactual %x expected %x\n",ROUNDDOWN(ptr_WS_element->virtual_address, PAGE_SIZE), ROUNDDOWN(WS_list_content[idx_expected_list], PAGE_SIZE) );
 					found = 1;
 					break;
 				}

@@ -508,11 +508,22 @@ void* sys_sbrk(int increment)
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
+	cprintf("in sys sbrk with increment %d\n", increment);
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
 	uint32 previous_break= env->segment_break;
-		if(increment>0 && increment <(env->segment_break -env->segment_break)){
+		if(increment>0 && increment <(env->segment_break - env->hard_limit)){
 			if (increment % PAGE_SIZE==0){
 				env->segment_break += increment;
+				uint32* page_table_ptr = NULL;
+				for(uint32 i = previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+					int result = get_page_table(env->env_page_directory, i, &page_table_ptr);
+					if(result == TABLE_NOT_EXIST){
+						page_table_ptr = create_page_table(env->env_page_directory, i);
+					}
+					pt_set_page_permissions(env->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+
+				}
+				cprintf("previous break 1: %x\n", previous_break);
 				return (void*) previous_break;
 			}
 			else{
@@ -520,7 +531,19 @@ void* sys_sbrk(int increment)
 				for(int i=increment; i%PAGE_SIZE!=0; i++){
 						counter++;
 				}
+				cprintf("before accessing environment\n");
 				env->segment_break += (increment+counter);
+				uint32* page_table_ptr = NULL;
+				cprintf("before marking\n");
+				for(uint32 i=previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+					int result = get_page_table(env->env_page_directory, i, &page_table_ptr);
+					if(result == TABLE_NOT_EXIST){
+						page_table_ptr = create_page_table(env->env_page_directory, i);
+					}
+					pt_set_page_permissions(env->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+
+				}
+				cprintf("previous break 2: %x\n", previous_break);
 				return (void*) previous_break;
 			}
 		}

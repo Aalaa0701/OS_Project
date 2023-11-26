@@ -140,12 +140,14 @@ void *alloc_block_FF(uint32 size)
 		uint32 da_break = (uint32)sbrk(0);
 		initialize_dynamic_allocator(da_start, da_break - da_start);
 	}
+	cprintf("in allocator ms1\n");
 	int i = 1;
 	struct BlockMetaData* list_iterator;
 	LIST_FOREACH(list_iterator, &myListOfBlocks){
 		if(list_iterator->is_free == 1 && list_iterator->size > size_to_be_allocated){
 			uint32 size_remaining = list_iterator->size - size_to_be_allocated;
 			if(size_remaining > (uint32)sizeOfMetaData()){
+				cprintf("first case\n");
 				found = 1;
 				list_iterator->is_free = 0;
 				list_iterator->size = size_to_be_allocated;
