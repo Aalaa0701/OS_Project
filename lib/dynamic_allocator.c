@@ -141,12 +141,8 @@ void *alloc_block_FF(uint32 size)
 		initialize_dynamic_allocator(da_start, da_break - da_start);
 	}
 	int listsize = LIST_SIZE(&myListOfBlocks);
-	int m = 1;
 	struct BlockMetaData* list_iterator = LIST_FIRST(&myListOfBlocks);
 	for(int i = 0; i < listsize; i++){
-//		if(listsize == 1508){
-//			cprintf("i: %d\n", i + 1);
-//		}
 		if(list_iterator == 0){
 			break;
 		}
@@ -247,7 +243,7 @@ void *alloc_block_FF(uint32 size)
 				}
 			}
 		}
-
+		cprintf("null!!\n");
 		return NULL;
 	}
 
