@@ -508,22 +508,23 @@ void* sys_sbrk(int increment)
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
-	cprintf("in sys sbrk with increment %d\n", increment);
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
 	uint32 previous_break= env->segment_break;
+	if(increment > (env->segment_break - env->hard_limit ) || env->segment_break == env->hard_limit) {
+		return(void*) -1;
+	}
 		if(increment>0 && increment <(env->segment_break - env->hard_limit)){
 			if (increment % PAGE_SIZE==0){
 				env->segment_break += increment;
 				uint32* page_table_ptr = NULL;
 				for(uint32 i = previous_break ;i < env->segment_break;i+=PAGE_SIZE){
-					int result = get_page_table(env->env_page_directory, i, &page_table_ptr);
+					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
 					if(result == TABLE_NOT_EXIST){
-						page_table_ptr = create_page_table(env->env_page_directory, i);
+						page_table_ptr = create_page_table(curenv->env_page_directory, i);
 					}
-					pt_set_page_permissions(env->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
 
 				}
-				cprintf("previous break 1: %x\n", previous_break);
 				return (void*) previous_break;
 			}
 			else{
@@ -531,20 +532,17 @@ void* sys_sbrk(int increment)
 				for(int i=increment; i%PAGE_SIZE!=0; i++){
 						counter++;
 				}
-				cprintf("before accessing environment\n");
 				env->segment_break += (increment+counter);
 				uint32* page_table_ptr = NULL;
-				cprintf("before marking\n");
 				for(uint32 i=previous_break ;i < env->segment_break;i+=PAGE_SIZE){
-					int result = get_page_table(env->env_page_directory, i, &page_table_ptr);
+					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
 					if(result == TABLE_NOT_EXIST){
-						page_table_ptr = create_page_table(env->env_page_directory, i);
+						page_table_ptr = create_page_table(curenv->env_page_directory, i);
 					}
-					pt_set_page_permissions(env->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
 
 				}
-				cprintf("previous break 2: %x\n", previous_break);
-				return (void*) previous_break;
+				return (void*)previous_break;
 			}
 		}
 		else if(increment == 0){
@@ -570,9 +568,7 @@ void* sys_sbrk(int increment)
 			}
 			return (void*) env->segment_break;
 		}
-		if(increment > (env->segment_break - env->hard_limit|| env->segment_break ==USER_HEAP_MAX)) {
-				return(void*) -1;
-		}
+
 
 }
 void* sys_limit(){
@@ -597,10 +593,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		return sys_get_permissions(a1);
 		break;
 	case SYS_brk:
-		sys_sbrk(a1);
+		return (uint32)sys_sbrk((int)a1);
 		break;
 	case SYS_limit:
-	    sys_limit();
+	    return (uint32)sys_limit();
 	    break;
 	case SYS_free_user_mem:
 		if(a1+16*256 >= USER_LIMIT){

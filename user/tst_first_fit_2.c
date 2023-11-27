@@ -212,7 +212,6 @@ void _main(void)
 
 		//Fill the 7th free block
 		va = malloc(actualSize);
-
 		//Fill the remaining area
 		uint32 numOfRem2KBAllocs = ((USER_HEAP_START + DYN_ALLOC_MAX_SIZE - (uint32)sbrk(0)) / PAGE_SIZE) * 2;
 		for (int i = 0; i < numOfRem2KBAllocs; ++i)
@@ -225,7 +224,6 @@ void _main(void)
 				break;
 			}
 		}
-
 		//Test two more allocs
 		va = malloc(actualSize);
 		va = malloc(actualSize);

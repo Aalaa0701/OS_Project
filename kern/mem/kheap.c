@@ -56,9 +56,11 @@ void* sbrk(int increment)
 	 * 	3) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, kernel should panic(...)
 	 */
-
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
 	uint32 previous_break= segment_break;
+	if(increment > (segment_break - hard_limit)|| segment_break == hard_limit){
+		panic("exceeded the limit");
+	}
 		if (increment >0 && increment <= (segment_break - hard_limit)){
 			if (increment % PAGE_SIZE==0){
 				segment_break += increment;
@@ -123,9 +125,7 @@ void* sbrk(int increment)
 
 
 
-		if(increment > (segment_break - hard_limit)|| segment_break == KERNEL_HEAP_MAX){
-			panic("exceeded the limit");
-		}
+
 
 
 }

@@ -86,23 +86,16 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 
 	if(wsSize < (curenv->page_WS_max_size))
 	{
-		cprintf("placement\n");
-		cprintf("fault address: %x\n");
-		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
-		//TODO: [PROJECT'23.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
-		// Write your code here, remove the panic and write your code
-		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
 		uint32 *ptr_page_table = NULL;
 		uint32 new_va = ROUNDDOWN(fault_va, PAGE_SIZE);
 
 		unsigned int permissions = pt_get_page_permissions(curenv->env_page_directory, fault_va);
 		int readc = pf_read_env_page(curenv,(void*)new_va);
 		if (readc == E_PAGE_NOT_EXIST_IN_PF){
-		  if(new_va >= (uint32)USER_HEAP_START && new_va <= (uint32)USER_HEAP_MAX){
-			  cprintf("in user area\n");
-			  if((permissions & PERM_AVAILABLE) != PERM_AVAILABLE){
-					 sched_kill_env(curenv->env_id);
-				 }
+		  if(new_va >= (uint32)USER_HEAP_START && new_va < (uint32)USER_HEAP_MAX){
+			  if(permissions == 0 || permissions == -1){
+				  sched_kill_env(curenv->env_id);
+			  }
 			struct WorkingSetElement* element = env_page_ws_list_create_element(curenv,new_va);
 			LIST_INSERT_TAIL(&(curenv->page_WS_list), element);
 			if(LIST_SIZE(&(curenv->page_WS_list)) == curenv->page_WS_max_size){

@@ -337,10 +337,8 @@ void sys_allocate_chunk(uint32 virtual_address, uint32 size, uint32 perms)
 void* sys_sbrk(int increment)
 {
 	//Comment the following line before start coding...
-	//panic("not implemented yet");
-	syscall(SYS_brk, increment, 0,0,0,0);
-	//return ((void*)syscall(SYS_brk, increment, 0,0,0,0));
-	return (void*)-1;
+	void* address_returned = (void*)syscall(SYS_brk, increment, 0,0,0,0);
+	return (void*)address_returned;
 }
 
 void sys_free_user_mem(uint32 virtual_address, uint32 size)
@@ -357,8 +355,8 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 }
 void* sys_limit()
 {
-  syscall(SYS_limit,0,0,0,0,0);
-  return (void*)-1;
+  void* brk = (void*)syscall(SYS_limit,0,0,0,0,0);
+  return brk;
 }
 
 uint32 sys_get_permissions(uint32 virtual_address){

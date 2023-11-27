@@ -29,7 +29,8 @@ struct BlockMetaData
 };
 struct Pages
 {
-	uint32 size;		//block size (including size of its meta data)
+	uint32 size;
+	uint32 address;//block size (including size of its meta data)
 	uint8 is_free;		//is_free block?
 	LIST_ENTRY(Pages) prev_next_info;	/* linked list links */
 	uint32 prev_address;

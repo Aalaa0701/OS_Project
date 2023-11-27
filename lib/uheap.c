@@ -6,6 +6,7 @@
 #define pages_in_user_heap (((unsigned int)USER_HEAP_MAX - ((unsigned int)USER_HEAP_START + (unsigned int)DYN_ALLOC_MAX_SIZE) + (unsigned int)PAGE_SIZE)/PAGE_SIZE)
 uint32 pages_allocated_in_uheap = 0;
 int FirstTimeFlag = 1;
+uint32 save_pages[12280] = {0};//122881
 void InitializeUHeap()
 {
 	if(FirstTimeFlag)
@@ -34,9 +35,9 @@ void* sbrk(int increment)
 //=================================
 // [2] ALLOCATE SPACE IN USER HEAP:
 //=================================
+
 void* malloc(uint32 size)
 {
-	cprintf("in malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	InitializeUHeap();
@@ -46,7 +47,6 @@ void* malloc(uint32 size)
 	// Write your code here, remove the panic and write your code
 	if(sys_isUHeapPlacementStrategyFIRSTFIT()){
 		if(size <= (unsigned int)DYN_ALLOC_MAX_BLOCK_SIZE){
-			cprintf("allocator ms1\n");
 			struct BlockMetaData* v_address = alloc_block_FF(size);
 			return v_address;
 		}
@@ -62,7 +62,6 @@ void* malloc(uint32 size)
 				return NULL;
 			}
 			else{
-				cprintf("requested pages: %x\n", requested_pages);
 				uint32 start_address = USER_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE;
 				uint32 found_address = 0;
 				for(int i = 0; i < pages_in_user_heap; i++){
@@ -104,15 +103,10 @@ void* malloc(uint32 size)
 					}
 				}
 				if(found_address != 0){
-					cprintf("found address: %x\n", found_address);
 					//assign page and mark it
 					sys_allocate_user_mem(found_address, requested_pages);
-					cprintf("return from sys allocate\n");
-//					struct Pages* new_page = (struct Pages*)found_address;
-//					cprintf("assign pages\n");
-//					new_page->size = requested_pages;
-//					cprintf("ACCESS pages\n");
-//					LIST_INSERT_TAIL(&list_of_pages, new_page);
+					int index_to_save_page = ((found_address - start_address) / (uint32)PAGE_SIZE);
+					save_pages[index_to_save_page] = (int)requested_pages;
 					pages_allocated_in_uheap += requested_pages;
 					return (void*)found_address;
 				}
@@ -120,11 +114,7 @@ void* malloc(uint32 size)
 			}
 		}
 	}
-	//panic("malloc() is not implemented yet...!!");
 	return NULL;
-	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
-	//to check the current strategy
-
 }
 
 //=================================
@@ -144,9 +134,11 @@ void free(void* virtual_address)
 	}
 	//case address in page allocator range
 	else if((uint32)virtual_address >= ((uint32)USER_HEAP_START + (uint32)DYN_ALLOC_MAX_SIZE + (uint32)PAGE_SIZE) && (uint32)virtual_address < (uint32)USER_HEAP_MAX){
-		struct Pages* pages_deleted = (struct Pages*)virtual_address;
-		uint32 size_of_pages = pages_deleted->size;
-
+		uint32 new_va = ROUNDDOWN((uint32)virtual_address, PAGE_SIZE);
+		uint32 start_address = USER_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE;
+		uint32 index = ((new_va - start_address) / (uint32)PAGE_SIZE);
+		uint32 size_of_pages = save_pages[index];
+		save_pages[index] = 0;
 		sys_free_user_mem((uint32)virtual_address, size_of_pages);
 	}
 }

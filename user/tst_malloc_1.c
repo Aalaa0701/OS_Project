@@ -19,7 +19,6 @@ void _main(void)
 	 * PAGES ARE ALLOCATED IN DYNAMIC ALLOCATOR DUE TO sbrk()
 	 * (e.g. DURING THE DYNAMIC CREATION OF WS ELEMENT in FH).
 	 *********************************************************/
-
 	//cprintf("1\n");
 	//Initial test to ensure it works on "PLACEMENT" not "REPLACEMENT"
 #if USE_KHEAP
@@ -58,7 +57,7 @@ void _main(void)
 	int expectedNumOfFrames, actualNumOfFrames;
 	void* ptr_allocations[20] = {0};
 	{
-		//cprintf("3\n");
+		cprintf("3\n");
 
 		//2 MB
 		{
