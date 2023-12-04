@@ -43,17 +43,20 @@ void _main(void)
 	}
 
 	uint32* secondlistVA= (uint32*)0x200000;
+	cprintf("after 0x200000\n");
 	x = x + *secondlistVA;
 	secondlistVA = (uint32*) 0x202000;
 	x = x + *secondlistVA;
-
+	cprintf("after second_listva\n");
 	actual_second_list[0]=0X205000;
 	actual_second_list[1]=0X204000;
 	actual_second_list[2]=0x203000;
 	actual_second_list[3]=0x201000;
+	cprintf("before loop in TEST\n");
 	for (int i=12;i>6;i--)
 		actual_active_list[i]=actual_active_list[i-7];
 
+	cprintf("after loop\n");
 	actual_active_list[0]=0x202000;
 	actual_active_list[1]=0x200000;
 	actual_active_list[2]=0xee3fe000;
@@ -61,7 +64,6 @@ void _main(void)
 	actual_active_list[4]=0xedffe000;
 	actual_active_list[5]=0xedffd000;
 	actual_active_list[6]=0xedbfe000;
-
 	uint32 expected, actual ;
 	cprintf("STEP A: checking PLACEMENT fault handling ... \n");
 	{

@@ -34,12 +34,15 @@ void _main(void)
 	int usedDiskPages = sys_pf_calculate_allocated_pages();
 
 	//Reading (Not Modified)
+	cprintf("Reading (Not Modified)\n");
 	char garbage1 = arr[PAGE_SIZE*11-1] ;
 	char garbage2 = arr[PAGE_SIZE*12-1] ;
 	char garbage4,garbage5;
 
 	//Writing (Modified)
+	cprintf("Writing (Modified)\n");
 	int i ;
+	cprintf("maximum iteration: %d\n",PAGE_SIZE*10);
 	for (i = 0 ; i < PAGE_SIZE*10 ; i+=PAGE_SIZE/2)
 	{
 		arr[i] = -1 ;
@@ -47,9 +50,11 @@ void _main(void)
 		//*ptr = *ptr2 ;
 		/*==========================================================================*/
 		//always use pages at 0x801000 and 0x804000
+		cprintf("always use pages at 0x801000 and 0x804000\n");
 		garbage4 = *ptr + garbage5;
 		garbage5 = *ptr2 + garbage4;
 		ptr++ ; ptr2++ ;
+		cprintf("iteration of i: %d\n", i);
 	}
 
 	//===================
@@ -59,8 +64,14 @@ void _main(void)
 		if( (sys_pf_calculate_allocated_pages() - usedDiskPages) !=  0) panic("Unexpected extra/less pages have been added to page file.. NOT Expected to add new pages to the page file");
 
 		uint32 freePagesAfter = (sys_calculate_free_frames() + sys_calculate_modified_frames());
-		if( (freePages - freePagesAfter) != 0 )
+		if( (freePages - freePagesAfter) != 0 ){
+			cprintf("free pages: %d\n", freePages);
+			cprintf("free pages after: %d\n", freePagesAfter);
+			cprintf("free frames: %d\n", sys_calculate_free_frames());
+			cprintf("modified frames:%d\n", sys_calculate_modified_frames());
 			panic("Extra memory are wrongly allocated... It's REplacement: expected that no extra frames are allocated");
+		}
+
 
 	}
 

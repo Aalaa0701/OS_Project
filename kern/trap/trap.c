@@ -353,6 +353,7 @@ void fault_handler(struct Trapframe *tf)
 	else
 	{
 		//cprintf("trap from USER\n");
+		cprintf("fault_va: %x\n", fault_va);
 		if (fault_va >= USTACKTOP && fault_va < USER_TOP)
 			panic("User: stack underflow exception!");
 	}
@@ -378,15 +379,15 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'23.MS2 - #13] [3] PAGE FAULT HANDLER - Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
-
-			unsigned int permission = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+			cprintf("address in trap: %x\n", fault_va);
+			uint32 new_va = ROUNDDOWN(fault_va, PAGE_SIZE);
+			unsigned int permission = pt_get_page_permissions(faulted_env->env_page_directory, new_va);
 			  if ((permission & PERM_USER) != PERM_USER && (permission & PERM_PRESENT)){
 				sched_kill_env(curenv->env_id);
 			  }
 			  else if ((permission & PERM_WRITEABLE) != PERM_WRITEABLE && (permission & PERM_PRESENT)){
 				  sched_kill_env(curenv->env_id);
 			  }
-
 			/*============================================================================================*/
 		}
 

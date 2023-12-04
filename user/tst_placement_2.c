@@ -45,14 +45,14 @@ void _main(void)
 	uint32 expected, actual ;
 	cprintf("STEP A: checking PLACEMENT fault handling ... \n");
 	{
-		if( arr[0] !=  -1)  panic("PLACEMENT of stack page failed");
-		if( arr[PAGE_SIZE] !=  -1)  panic("PLACEMENT of stack page failed");
+		if( arr[0] !=  -1)  panic("PLACEMENT of stack page failed1");
+		if( arr[PAGE_SIZE] !=  -1)  panic("PLACEMENT of stack page failed2");
 
-		if( arr[PAGE_SIZE*1024] !=  -1)  panic("PLACEMENT of stack page failed");
-		if( arr[PAGE_SIZE*1025] !=  -1)  panic("PLACEMENT of stack page failed");
+		if( arr[PAGE_SIZE*1024] !=  -1)  panic("PLACEMENT of stack page failed3");
+		if( arr[PAGE_SIZE*1025] !=  -1)  panic("PLACEMENT of stack page failed4");
 
-		if( arr[PAGE_SIZE*1024*2] !=  -1)  panic("PLACEMENT of stack page failed");
-		if( arr[PAGE_SIZE*1024*2 + PAGE_SIZE] !=  -1)  panic("PLACEMENT of stack page failed");
+		if( arr[PAGE_SIZE*1024*2] !=  -1)  panic("PLACEMENT of stack page failed5");
+		if( arr[PAGE_SIZE*1024*2 + PAGE_SIZE] !=  -1)  panic("PLACEMENT of stack page failed6");
 
 
 		if( (sys_pf_calculate_allocated_pages() - usedDiskPages) !=  0) panic("new stack pages should NOT written to Page File until it's replaced");

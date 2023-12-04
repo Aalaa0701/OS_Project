@@ -130,13 +130,6 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		}
 		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
 	}
-
-//	for(int i = 0; i < size; i++){
-//		pt_set_page_permissions(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
-//	}
-	// Write your code here, remove the panic and write your code
-
-
 }
 
 //=====================================
