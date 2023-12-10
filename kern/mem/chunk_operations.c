@@ -122,6 +122,15 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//TODO: [PROJECT'23.MS2 - #10] [2] USER HEAP - allocate_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
 	/*=============================================================================*/
+	if((size / (uint32)PAGE_SIZE) != 0){
+		uint32 temp = size;
+		if(size % (uint32)PAGE_SIZE == 0){
+			size = temp / (uint32)PAGE_SIZE;
+		}
+		else{
+			size = (temp / (uint32)PAGE_SIZE) + 1;
+		}
+	}
 	uint32* page_table_ptr = NULL;
 	for(int i = 0; i < size; i++){
 		int result = get_page_table(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE), &page_table_ptr);
@@ -143,7 +152,15 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//inctst();
 	//return;
 	/*==========================================================================*/
-
+	if((size / (uint32)PAGE_SIZE) != 0){
+		uint32 temp = size;
+		if(size % (uint32)PAGE_SIZE == 0){
+			size = temp / (uint32)PAGE_SIZE;
+		}
+		else{
+			size = (temp / (uint32)PAGE_SIZE) + 1;
+		}
+	}
 	// Write your code here, remove the panic and write your code
 	for(int i = 0; i < size; i++){
 		//unmark
@@ -153,6 +170,23 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		unmap_frame(e->env_page_directory, virtual_address + (i * (unsigned int)PAGE_SIZE));
 		//remove from memory
 
+	}
+	uint32 num_of_elements_before_last = 0;
+	uint32 list_size = LIST_SIZE(&(e->page_WS_list));
+	struct WorkingSetElement* iterator = LIST_FIRST(&(e->page_WS_list));
+	for(int i = 0; i < list_size; i++){
+		if(iterator->virtual_address == e->page_last_WS_element->virtual_address){
+			break;
+		}
+		else{
+			num_of_elements_before_last++;
+			iterator = iterator->prev_next_info.le_next;
+		}
+	}
+	for(int i = 0; i < num_of_elements_before_last; i++){
+		struct WorkingSetElement* current_iterator = LIST_FIRST(&(e->page_WS_list));
+		LIST_REMOVE(&(e->page_WS_list), current_iterator);
+		LIST_INSERT_TAIL(&(e->page_WS_list), current_iterator);
 	}
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
 

@@ -22,15 +22,10 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	  if(returned_address == NULL){
 		  panic("Kernel panic");
 	  }
-//	  if (e->page_last_WS_index == e->page_WS_max_size || LIST_SIZE(&(e->page_WS_list)) == e->page_WS_max_size
-//			  || e->page_last_WS_element != NULL){
-//		panic("Kernel panic");
-//	  }
 	  struct WorkingSetElement* obj_ws;
-	 obj_ws = (struct WorkingSetElement*)returned_address;
-	//obj_ws->empty = 0;
-	obj_ws->sweeps_counter = 0;
-	obj_ws->time_stamp = 0;
+	  obj_ws = (struct WorkingSetElement*)returned_address;
+	  obj_ws->sweeps_counter = 0;
+	  obj_ws->time_stamp = 0;
 	  obj_ws->virtual_address = virtual_address;
 	  return obj_ws;
 }
@@ -84,12 +79,10 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 			{
 				if (e->page_last_WS_element == wse)
 				{
-					cprintf("removed element is last page\n");
-					if(e->page_last_WS_element == LIST_LAST(&(e->page_WS_list))){
+
+					e->page_last_WS_element = LIST_NEXT(wse);
+					if(e->page_last_WS_element == NULL){
 						e->page_last_WS_element = LIST_FIRST(&(e->page_WS_list));
-					}
-					else{
-						e->page_last_WS_element = LIST_NEXT(wse);
 					}
 				}
 				LIST_REMOVE(&(e->page_WS_list), wse);

@@ -60,7 +60,9 @@ void _main(void)
 		if (found != 1) panic("Page FIFO algo failed.. trace it by printing WS before and after page fault");
 	}
 	{
-		if (garbage4 != *ptr) panic("test failed!");
+		if (garbage4 != *ptr){
+			panic("test failed!");
+		}
 		if (garbage5 != *ptr2) panic("test failed!");
 	}
 	cprintf("Congratulations!! test PAGE replacement [FIFO 1] is completed successfully.\n");
