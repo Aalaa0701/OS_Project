@@ -57,7 +57,6 @@ void _main(void)
 	int expectedNumOfFrames, actualNumOfFrames;
 	void* ptr_allocations[20] = {0};
 	{
-		cprintf("3\n");
 
 		//2 MB
 		{
@@ -73,17 +72,12 @@ void _main(void)
 
 
 			freeFrames = sys_calculate_free_frames() ;
-			cprintf("free frames: %d\n", freeFrames);
 			lastIndexOfByte = (2*Mega-kilo)/sizeof(char) - 1;
 			byteArr = (char *) ptr_allocations[0];
-			cprintf("bytearr ALl : %x\n", byteArr);
 			byteArr[0] = minByte ;
-			cprintf("bytearr 0 ->1 : %x\n", byteArr[0]);
 			byteArr[lastIndexOfByte] = maxByte ;
-			cprintf("bytearr 1 ->2 : %x\n", byteArr[lastIndexOfByte]);
 			expectedNumOfFrames = 2 /*+1 table already created in malloc due to marking the allocated pages*/ ;
 			actualNumOfFrames = (freeFrames - sys_calculate_free_frames()) ;
-			cprintf("free frames 2: %d\n", sys_calculate_free_frames());
 			if (actualNumOfFrames < expectedNumOfFrames)
 				panic("Wrong fault handler: pages are not loaded successfully into memory/WS. Expected diff in frames at least = %d, actual = %d\n", expectedNumOfFrames, actualNumOfFrames);
 

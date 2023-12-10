@@ -7,6 +7,7 @@ int fibonacci(int n);
 void
 _main(void)
 {
+	sys_env_set_nice(20);
 	int i1=0;
 	char buff1[256];
 	atomic_readline("Please enter Fibonacci index:", buff1);

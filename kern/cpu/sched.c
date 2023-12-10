@@ -210,6 +210,20 @@ struct Env* fos_scheduler_BSD()
             int zerovar = 0;
             fixed_point_t fixedzero=fix_int(zerovar);
         	current_env->recentCPU = fixedzero;
+			fixed_point_t recent_cpu_division = fix_scale(current_env->recentCPU, 4);
+			int nice_multiplication = current_env->nice * 2;
+			int recent_cpu_int = fix_trunc(recent_cpu_division);
+			int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
+			if(new_priority > PRI_MAX){
+				new_priority = PRI_MAX;
+			}
+			if(new_priority < PRI_MIN){
+				new_priority = PRI_MIN;
+			}
+//			cprintf("new priority in scheduler %d\n", new_priority);
+//			cprintf("id %d\n", current_env->env_id);
+			current_env->priority = new_priority;
+        	enqueue(&env_ready_queues[PRI_MAX - new_priority], current_env);
             return current_env;
         }
         else{
@@ -233,7 +247,14 @@ void clock_interrupt_handler()
 		uint32 current_division = quantamised_ticks_current / 1000;
 		uint32 before_division = quantamised_ticks_before / 1000;
 		uint32 rounded_current = ROUNDDOWN(current_division, 1);
-		uint32 rounded_before = ROUNDDOWN(before_division, 1);
+		uint32 rounded_before;
+		if((int)quantamised_ticks_before > 0){
+			rounded_before = ROUNDDOWN(before_division, 1);
+		}
+		else{
+			rounded_before = 0;
+		}
+
 		//every tick
 		//recent cpu for running process
 		fixed_point_t prev_cpu = curenv->recentCPU;
@@ -241,7 +262,8 @@ void clock_interrupt_handler()
 	    fixed_point_t fixed_one = fix_int(one_var);
 		curenv->recentCPU = fix_add(prev_cpu, fixed_one);
 		//every 4th tick
-		if(ticks % 4 == 0){
+		if(ticks % 4 == 0 && ticks > 0){
+
 			for(int i = 0; i < num_of_ready_queues; i++){
 				for(int j = 0; j < env_ready_queues[i].size; j++){
 					struct Env* ready_env = dequeue(&env_ready_queues[i]);
@@ -257,12 +279,28 @@ void clock_interrupt_handler()
 					}
 
 					ready_env->priority = new_priority;
+//					cprintf("new priority in loop %d\n", new_priority);
+//					cprintf("id %d\n", ready_env->env_id);
 					enqueue(&env_ready_queues[PRI_MAX - new_priority], ready_env);
 				}
 			}
+			fixed_point_t recent_cpu_division = fix_scale(curenv->recentCPU, 4);
+			int nice_multiplication = curenv->nice * 2;
+			int recent_cpu_int = fix_trunc(recent_cpu_division);
+			int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
+			if(new_priority > PRI_MAX){
+				new_priority = PRI_MAX;
+			}
+			if(new_priority < PRI_MIN){
+				new_priority = PRI_MIN;
+			}
+//			cprintf("new priority after loop%d\n", new_priority);
+//			cprintf("id %d\n", curenv->env_id);
+			curenv->priority = new_priority;
+			enqueue(&env_ready_queues[PRI_MAX - new_priority], curenv);
 		}
 		//every second
-		if(rounded_current == rounded_before){
+		if(rounded_current != rounded_before && rounded_before > 0){
 			//recent cpu of every process & load avg
 			//running process
 			//load avg = loadavg * 59/60 + 1/60 * ready
@@ -303,7 +341,6 @@ void clock_interrupt_handler()
 				}
 			}
 			//blocked
-
 
 		}
 

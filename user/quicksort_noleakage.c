@@ -80,9 +80,7 @@ void _main(void)
 			sys_enable_interrupt();
 
 		}
-
 		free(Elements) ;
-
 		sys_disable_interrupt();
 
 		cprintf("Do you want to repeat (y/n): ") ;

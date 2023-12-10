@@ -86,7 +86,6 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		int iWS =curenv->page_last_WS_index;
 		uint32 wsSize = env_page_ws_get_size(curenv);
 #endif
-cprintf("in page fault handler\n");
 	if(isPageReplacmentAlgorithmFIFO())
 	{
 		//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
@@ -160,7 +159,7 @@ cprintf("in page fault handler\n");
 					unmap_frame(curenv->env_page_directory, replaced_va);
 
 				}
-				else if(new_va >= (uint32)USTACKBOTTOM && new_va <= (uint32)USTACKTOP){
+				else if(new_va >= (uint32)USTACKBOTTOM && new_va < (uint32)USTACKTOP){
 
 					uint32 replaced_va = curenv->page_last_WS_element->virtual_address;
 
@@ -241,7 +240,6 @@ cprintf("in page fault handler\n");
 				//case list1 full
 				else{
 					if(current_second_list_size == 0){
-
 						struct FrameInfo* ptr_frame_info = NULL;
 						int allocnewframe = allocate_frame(&ptr_frame_info);
 						map_frame(curenv->env_page_directory, ptr_frame_info, new_va, PERM_WRITEABLE|PERM_USER|PERM_PRESENT);
@@ -305,6 +303,32 @@ cprintf("in page fault handler\n");
 									continue;
 								}
 							}
+							if(iterator == 0){
+								struct FrameInfo* ptr_frame_info = NULL;
+								int allocnewframe = allocate_frame(&ptr_frame_info);
+								map_frame(curenv->env_page_directory, ptr_frame_info, new_va, PERM_WRITEABLE|PERM_USER|PERM_PRESENT);
+								int readc = pf_read_env_page(curenv,(void*)new_va);
+								if (readc == E_PAGE_NOT_EXIST_IN_PF){
+									if(new_va >= (uint32)USER_HEAP_START && new_va < (uint32)USER_HEAP_MAX){
+										if(permissions == 0 || permissions == -1){
+											sched_kill_env(curenv->env_id);
+										}
+									}
+									else if(new_va >= (uint32)USTACKBOTTOM && new_va < (uint32)USTACKTOP){
+
+									}
+									else{
+										sched_kill_env(curenv->env_id);
+									}
+								}
+								struct WorkingSetElement* new_element = env_page_ws_list_create_element(curenv, new_va);
+								struct WorkingSetElement* overflowed_element = LIST_LAST(&(curenv->ActiveList));
+								pt_set_page_permissions(curenv->env_page_directory, overflowed_element->virtual_address, 0, PERM_PRESENT);
+								LIST_REMOVE(&(curenv->ActiveList), overflowed_element);
+								LIST_INSERT_HEAD(&(curenv->SecondList), overflowed_element);
+								LIST_INSERT_HEAD(&(curenv->ActiveList), new_element);
+								return;
+							}
 							struct WorkingSetElement* overflowed_element = LIST_LAST(&(curenv->ActiveList));
 							LIST_REMOVE(&(curenv->ActiveList), overflowed_element);
 							LIST_REMOVE(&(curenv->SecondList), iterator);
@@ -361,6 +385,7 @@ cprintf("in page fault handler\n");
 					struct WorkingSetElement* iterator = LIST_FIRST(&(curenv->SecondList));
 					for(int i = 0; i < second_list_size_max; i++){
 						if(new_va == iterator->virtual_address){
+
 							break;
 						}
 						else{
@@ -368,15 +393,53 @@ cprintf("in page fault handler\n");
 							continue;
 						}
 					}
-					struct WorkingSetElement* overflowed_element = LIST_LAST(&(curenv->ActiveList));
-					uint32 overflowed_address = overflowed_element->virtual_address;
-					struct WorkingSetElement* MRU_element = iterator;
-					LIST_REMOVE(&(curenv->SecondList), MRU_element);
-					LIST_REMOVE(&(curenv->ActiveList), overflowed_element);
-					LIST_INSERT_HEAD(&(curenv->SecondList), overflowed_element);
-					pt_set_page_permissions(curenv->env_page_directory, overflowed_address, 0, PERM_PRESENT);
-					LIST_INSERT_HEAD(&(curenv->ActiveList), MRU_element);
-					pt_set_page_permissions(curenv->env_page_directory, iterator->virtual_address, PERM_PRESENT, 0);
+					if(iterator == 0){
+						struct FrameInfo* ptr_frame_info = NULL;
+						int allocnewframe = allocate_frame(&ptr_frame_info);
+						map_frame(curenv->env_page_directory, ptr_frame_info, new_va, PERM_WRITEABLE|PERM_USER|PERM_PRESENT);
+						int readc = pf_read_env_page(curenv,(void*)new_va);
+						if (readc == E_PAGE_NOT_EXIST_IN_PF){
+							if(new_va >= (uint32)USER_HEAP_START && new_va < (uint32)USER_HEAP_MAX){
+								if(permissions == 0 || permissions == -1){
+									sched_kill_env(curenv->env_id);
+								}
+							}
+							else if(new_va >= (uint32)USTACKBOTTOM && new_va < (uint32)USTACKTOP){
+
+							}
+							else{
+								sched_kill_env(curenv->env_id);
+							}
+						}
+						pt_set_page_permissions(curenv->env_page_directory, new_va, PERM_PRESENT, 0);
+						struct WorkingSetElement* victim_element = LIST_LAST(&(curenv->SecondList));
+						struct WorkingSetElement* new_element = env_page_ws_list_create_element(curenv, new_va);
+						struct WorkingSetElement* overflowed_element = LIST_LAST(&(curenv->ActiveList));
+						uint32 victim_va = victim_element->virtual_address;
+						int victim_permission = pt_get_page_permissions(curenv->env_page_directory, victim_element->virtual_address);
+						struct FrameInfo* victim_frame = get_frame_info(curenv->env_page_directory, victim_va, &ptr_page_table);
+						LIST_REMOVE(&(curenv->SecondList), victim_element);
+						LIST_REMOVE(&(curenv->ActiveList), overflowed_element);
+						LIST_INSERT_HEAD(&(curenv->SecondList), overflowed_element);
+						pt_set_page_permissions(curenv->env_page_directory, overflowed_element->virtual_address, 0, PERM_PRESENT);
+						LIST_INSERT_HEAD(&(curenv->ActiveList), new_element);
+						if((victim_permission & PERM_MODIFIED) == PERM_MODIFIED){
+							pf_update_env_page(curenv, victim_va, victim_frame);
+						}
+						unmap_frame(curenv->env_page_directory, victim_va);
+					}
+					else{
+						struct WorkingSetElement* overflowed_element = LIST_LAST(&(curenv->ActiveList));
+						uint32 overflowed_address = overflowed_element->virtual_address;
+						struct WorkingSetElement* MRU_element = iterator;
+						LIST_REMOVE(&(curenv->SecondList), MRU_element);
+						LIST_REMOVE(&(curenv->ActiveList), overflowed_element);
+						LIST_INSERT_HEAD(&(curenv->SecondList), overflowed_element);
+						pt_set_page_permissions(curenv->env_page_directory, overflowed_address, 0, PERM_PRESENT);
+						LIST_INSERT_HEAD(&(curenv->ActiveList), MRU_element);
+						pt_set_page_permissions(curenv->env_page_directory, iterator->virtual_address, PERM_PRESENT, 0);
+					}
+
 				}
 
 			}
