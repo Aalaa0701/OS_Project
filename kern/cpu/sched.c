@@ -207,23 +207,24 @@ struct Env* fos_scheduler_BSD()
     for(int i = 0; i < num_of_ready_queues; i++){
         if(env_ready_queues[i].size != 0){
         	struct Env* current_env = dequeue(&env_ready_queues[i]);
-            int zerovar = 0;
-            fixed_point_t fixedzero=fix_int(zerovar);
-        	current_env->recentCPU = fixedzero;
-			fixed_point_t recent_cpu_division = fix_scale(current_env->recentCPU, 4);
-			int nice_multiplication = current_env->nice * 2;
-			int recent_cpu_int = fix_trunc(recent_cpu_division);
-			int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
-			if(new_priority > PRI_MAX){
-				new_priority = PRI_MAX;
-			}
-			if(new_priority < PRI_MIN){
-				new_priority = PRI_MIN;
-			}
-//			cprintf("new priority in scheduler %d\n", new_priority);
-//			cprintf("id %d\n", current_env->env_id);
-			current_env->priority = new_priority;
-        	enqueue(&env_ready_queues[PRI_MAX - new_priority], current_env);
+//            int zerovar = 0;
+//            fixed_point_t fixedzero=fix_int(zerovar);
+//        	current_env->recentCPU = fixedzero;
+//			fixed_point_t recent_cpu_division = fix_scale(current_env->recentCPU, 4);
+//			int nice_multiplication = current_env->nice * 2;
+//			int recent_cpu_int = fix_trunc(recent_cpu_division);
+//			int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
+//			if(new_priority > PRI_MAX){
+//				new_priority = PRI_MAX;
+//			}
+//			if(new_priority < PRI_MIN){
+//				new_priority = PRI_MIN;
+//			}
+//			current_env->priority = new_priority;
+			cprintf("new priority in loop %d\n", current_env->priority);
+			cprintf("id %d\n", current_env->env_id);
+			cprintf("current cpu %d\n", current_env->recentCPU);
+        	enqueue(&env_ready_queues[PRI_MAX - current_env->priority], current_env);
             return current_env;
         }
         else{
