@@ -552,6 +552,9 @@ void* sys_sbrk(int increment)
 			env->segment_break +=increment;
 			if((uint32)increment < PAGE_SIZE){
 				if(env->segment_break % PAGE_SIZE ==0){
+					env_page_ws_invalidate(env, previous_break);
+					pf_remove_env_page(env, previous_break);
+					pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
 					unmap_frame(ptr_page_directory,previous_break);
 				}
 			}
@@ -559,15 +562,39 @@ void* sys_sbrk(int increment)
 			else if((uint32)increment > PAGE_SIZE){
 				int noOfPages= (uint32)increment/PAGE_SIZE;
 				for(int i=0;i<noOfPages;i++){
+					env_page_ws_invalidate(env, previous_break);
+					pf_remove_env_page(env, previous_break);
+					pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
 					unmap_frame(ptr_page_directory,previous_break);
 					previous_break-=PAGE_SIZE;
 				}
 			}
 			else{
+				env_page_ws_invalidate(env, previous_break);
+				pf_remove_env_page(env, previous_break);
+				pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
 				unmap_frame(ptr_page_directory,previous_break);
+			}
+			uint32 num_of_elements_before_last = 0;
+			uint32 list_size = LIST_SIZE(&(env->page_WS_list));
+			struct WorkingSetElement* iterator = LIST_FIRST(&(env->page_WS_list));
+			for(int i = 0; i < list_size; i++){
+				if(iterator->virtual_address == env->page_last_WS_element->virtual_address){
+					break;
+				}
+				else{
+					num_of_elements_before_last++;
+					iterator = iterator->prev_next_info.le_next;
+				}
+			}
+			for(int i = 0; i < num_of_elements_before_last; i++){
+				struct WorkingSetElement* current_iterator = LIST_FIRST(&(env->page_WS_list));
+				LIST_REMOVE(&(env->page_WS_list), current_iterator);
+				LIST_INSERT_TAIL(&(env->page_WS_list), current_iterator);
 			}
 			return (void*) env->segment_break;
 		}
+
 
 
 }

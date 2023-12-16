@@ -161,6 +161,27 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		//remove from memory
 
 	}
+	if(e->page_last_WS_element == NULL){
+		return;
+	}
+	int num_of_elements_before_last = 0;
+	int list_size = LIST_SIZE(&(e->page_WS_list));
+	struct WorkingSetElement* iterator = LIST_FIRST(&(e->page_WS_list));
+
+	for(int i = 0; i < list_size; i++){
+		if(iterator->virtual_address == e->page_last_WS_element->virtual_address){
+			break;
+		}
+		else{
+			num_of_elements_before_last++;
+			iterator = iterator->prev_next_info.le_next;
+		}
+	}
+	for(int i = 0; i < num_of_elements_before_last; i++){
+		struct WorkingSetElement* current_iterator = LIST_FIRST(&(e->page_WS_list));
+		LIST_REMOVE(&(e->page_WS_list), current_iterator);
+		LIST_INSERT_TAIL(&(e->page_WS_list), current_iterator);
+	}
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
 
 }
