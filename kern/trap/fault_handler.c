@@ -88,6 +88,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 #endif
 	if(isPageReplacmentAlgorithmFIFO())
 	{
+		cprintf("in FIFO \n");
 		//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
 		// Write your code here, remove the panic and write your code
 		uint32 *ptr_page_table = NULL;
@@ -119,6 +120,8 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 				}
 			  }
 			  else {
+				  cprintf("new va: %x\n",new_va);
+				  cprintf("not in stack or heap\n");
 				sched_kill_env(curenv->env_id);
 			  }
 			}

@@ -204,33 +204,42 @@ struct Env* fos_scheduler_BSD()
 	//TODO: [PROJECT'23.MS3 - #5] [2] BSD SCHEDULER - fos_scheduler_BSD
 	//Your code is here
 	//Comment the following line
+//	cprintf("scheduler is called\n");
+//	if(curenv != NULL){
+//		cprintf("curenv is NULL!!\n");
+//		return NULL;
+////		int curenv_priority = curenv->priority;
+////		enqueue(&env_ready_queues[PRI_MAX - curenv_priority], curenv);
+//	}
+	uint8 found = 0;
     for(int i = 0; i < num_of_ready_queues; i++){
         if(env_ready_queues[i].size != 0){
         	struct Env* current_env = dequeue(&env_ready_queues[i]);
-//            int zerovar = 0;
-//            fixed_point_t fixedzero=fix_int(zerovar);
-//        	current_env->recentCPU = fixedzero;
-//			fixed_point_t recent_cpu_division = fix_scale(current_env->recentCPU, 4);
-//			int nice_multiplication = current_env->nice * 2;
-//			int recent_cpu_int = fix_trunc(recent_cpu_division);
-//			int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
-//			if(new_priority > PRI_MAX){
-//				new_priority = PRI_MAX;
-//			}
-//			if(new_priority < PRI_MIN){
-//				new_priority = PRI_MIN;
-//			}
-//			current_env->priority = new_priority;
-			cprintf("new priority in loop %d\n", current_env->priority);
-			cprintf("id %d\n", current_env->env_id);
-			cprintf("current cpu %d\n", current_env->recentCPU);
+        	if(current_env == NULL){
+        		found = 0;
+//        		cprintf("null env\n");
+        		continue;
+        	}
+        	found = 1;
+//        	cprintf("dequeued\n");
+//			cprintf("new priority in loop %d\n", current_env->priority);
+//			cprintf("id %d\n", current_env->env_id);
+//			cprintf("current cpu %d\n", current_env->recentCPU);
+			kclock_set_quantum(quantums[0]);
         	enqueue(&env_ready_queues[PRI_MAX - current_env->priority], current_env);
             return current_env;
         }
         else{
+        	found = 0;
             continue;
         }
     }
+    if(found == 0){
+        int zerovar = 0;
+        fixed_point_t fixedzero = fix_int(zerovar);
+    	loadAVG = fixedzero;
+    }
+    cprintf("nothing is found\n");
     return NULL;
 }
 
@@ -242,6 +251,7 @@ void clock_interrupt_handler()
 {
 	//TODO: [PROJECT'23.MS3 - #5] [2] BSD SCHEDULER - Your code is here
 	{
+//		cprintf("clock is called\n");
 		uint8 quantum = quantums[0];
 		uint32 quantamised_ticks_current = quantum * ticks;
 		uint32 quantamised_ticks_before = quantum * (ticks - 1);
@@ -267,6 +277,7 @@ void clock_interrupt_handler()
 
 			for(int i = 0; i < num_of_ready_queues; i++){
 				for(int j = 0; j < env_ready_queues[i].size; j++){
+//					cprintf("size of queue: %d\n", env_ready_queues[i].size);
 					struct Env* ready_env = dequeue(&env_ready_queues[i]);
 					fixed_point_t recent_cpu_division = fix_scale(ready_env->recentCPU, 4);
 					int nice_multiplication = ready_env->nice * 2;
@@ -302,6 +313,7 @@ void clock_interrupt_handler()
 		}
 		//every second
 		if(rounded_current != rounded_before && rounded_before > 0){
+//			cprintf("second passed\n");
 			//recent cpu of every process & load avg
 			//running process
 			//load avg = loadavg * 59/60 + 1/60 * ready

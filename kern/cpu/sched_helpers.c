@@ -51,8 +51,10 @@ void enqueue(struct Env_Queue* queue, struct Env* env)
 	assert(queue != NULL)	;
 	if(env != NULL)
 	{
+		//cprintf("env inserted at head\n");
 		LIST_INSERT_HEAD(queue, env);
 	}
+
 }
 
 //======================================
@@ -554,11 +556,8 @@ void env_set_nice(struct Env* e, int nice_value)
 	//TODO: [PROJECT'23.MS3 - #3] [2] BSD SCHEDULER - env_set_nice
 	//Your code is here
 	//Comment the following line
-    if (nice_value == 0){
-            e->nice = nice_value;
-        }
-    else{
-        e->nice = nice_value;
+    e->nice = nice_value;
+    if(e->env_status != ENV_NEW){
         fixed_point_t res = fix_unscale(e->recentCPU,4);
         fixed_point_t fixedNice = fix_int(e->nice * 2);
         fixed_point_t fixedprimax = fix_int(PRI_MAX);
@@ -566,15 +565,38 @@ void env_set_nice(struct Env* e, int nice_value)
         fixed_point_t firstsub = fix_sub(fixedprimax ,res);
         fixedpriority =  fix_sub(firstsub,fixedNice);
         int new_priority = fix_trunc(fixedpriority);
-		if(new_priority > PRI_MAX){
-			new_priority = PRI_MAX;
-		}
-		if(new_priority < PRI_MIN){
-			new_priority = PRI_MIN;
-		}
+    	if(new_priority > PRI_MAX){
+    		new_priority = PRI_MAX;
+    	}
+    	if(new_priority < PRI_MIN){
+    		new_priority = PRI_MIN;
+    	}
         fix_round(fixedpriority);
         e->priority = new_priority;
     }
+
+
+//    if (nice_value == 0){
+//            e->nice = nice_value;
+//        }
+//    else{
+//        e->nice = nice_value;
+//        fixed_point_t res = fix_unscale(e->recentCPU,4);
+//        fixed_point_t fixedNice = fix_int(e->nice * 2);
+//        fixed_point_t fixedprimax = fix_int(PRI_MAX);
+//        fixed_point_t fixedpriority = fix_int(e->priority);
+//        fixed_point_t firstsub = fix_sub(fixedprimax ,res);
+//        fixedpriority =  fix_sub(firstsub,fixedNice);
+//        int new_priority = fix_trunc(fixedpriority);
+//		if(new_priority > PRI_MAX){
+//			new_priority = PRI_MAX;
+//		}
+//		if(new_priority < PRI_MIN){
+//			new_priority = PRI_MIN;
+//		}
+//        fix_round(fixedpriority);
+//        e->priority = new_priority;
+//    }
 }
 int env_get_recent_cpu(struct Env* e)
 {
