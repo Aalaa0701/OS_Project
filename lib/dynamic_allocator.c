@@ -470,7 +470,7 @@ void free_block(void *va)
 			LIST_PREV(block_to_be_deleted)->size += block_to_be_deleted->size;
 			block_to_be_deleted->is_free = 0;
 			block_to_be_deleted->size = 0;
-			//return;
+			return;
 			struct BlockMetaData* prev_block = block_to_be_deleted->prev_next_info.le_prev;
 			prev_block->prev_next_info.le_next = NULL;
 		}
@@ -490,7 +490,7 @@ void free_block(void *va)
 			block_to_be_deleted->is_free = 1;
 			block_to_be_deleted->prev_next_info.le_next->is_free = 0;
 			block_to_be_deleted->prev_next_info.le_next->size = 0;
-			//return;
+			return;
 			struct BlockMetaData* next_block = block_to_be_deleted->prev_next_info.le_next->prev_next_info.le_next;
 			block_to_be_deleted->prev_next_info.le_next = next_block;
 			next_block->prev_next_info.le_prev = block_to_be_deleted;
@@ -513,7 +513,7 @@ void free_block(void *va)
 			block_to_be_deleted->is_free = 1;
 			next_block->is_free = 0;
 			next_block->size = 0;
-			//return;
+			return;
 			struct BlockMetaData* next_of_next_block = next_block->prev_next_info.le_next;
 			block_to_be_deleted->prev_next_info.le_next = next_of_next_block;
 			next_of_next_block->prev_next_info.le_prev = block_to_be_deleted;
@@ -528,7 +528,7 @@ void free_block(void *va)
 			prev_block->size += added_size;
 			block_to_be_deleted->is_free = 0;
 			block_to_be_deleted->size = 0;
-			//return;
+			return;
 
 			prev_block->prev_next_info.le_next = next_block;
 			next_block->prev_next_info.le_prev = prev_block;
