@@ -209,7 +209,7 @@ void _main(void)
 	uint32 pagealloc_end = pagealloc_start + 13*Mega + 32*kilo ;
 
 	//FREE ALL
-	{	cprintf("Free 1st 2 MB\n");
+	{
 		//Free 1st 2 MB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -225,7 +225,6 @@ void _main(void)
 			chk = sys_check_WS_list(notExpectedVAs, 2, 0, 3);
 			if (chk != 1) panic("free: page is not removed from WS");
 		}
-		cprintf("Free 2nd 2 MB\n");
 		//Free 2nd 2 MB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -238,7 +237,6 @@ void _main(void)
 			chk = sys_check_WS_list(notExpectedVAs, 2, 0, 3);
 			if (chk != 1) panic("free: page is not removed from WS");
 		}
-		cprintf("Free 6 MB\n");
 		//Free 6 MB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -250,7 +248,6 @@ void _main(void)
 			chk = sys_check_WS_list(notExpectedVAs, 3, 0, 3);
 			if (chk != 1) panic("free: page is not removed from WS");
 		}
-		cprintf("Free 7 KB\n");
 		//Free 7 KB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -262,7 +259,6 @@ void _main(void)
 			chk = sys_check_WS_list(notExpectedVAs, 2, 0, 3);
 			if (chk != 1) panic("free: page is not removed from WS");
 		}
-		cprintf("Free 3 MB\n");
 		//Free 3 MB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -271,7 +267,6 @@ void _main(void)
 			if ((usedDiskPages - sys_pf_calculate_allocated_pages()) != 0) panic("Wrong free: Extra or less pages are removed from PageFile");
 			if ((sys_calculate_free_frames() - freeFrames) != 0) panic("Wrong free: WS pages in memory and/or page tables are not freed correctly");
 		}
-		cprintf("Free 1st 3 KB\n");
 		//Free 1st 3 KB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -283,7 +278,6 @@ void _main(void)
 			chk = sys_check_WS_list(notExpectedVAs, 2, 0, 3);
 			if (chk != 1) panic("free: page is not removed from WS");
 		}
-		cprintf("Free 2nd 3 KB\n");
 		//Free 2nd 3 KB
 		{
 			freeFrames = sys_calculate_free_frames() ;
@@ -292,7 +286,6 @@ void _main(void)
 			if ((usedDiskPages - sys_pf_calculate_allocated_pages()) != 0) panic("Wrong free: Extra or less pages are removed from PageFile");
 			if ((sys_calculate_free_frames() - freeFrames) != 0) panic("Wrong free: WS pages in memory and/or page tables are not freed correctly");
 		}
-		cprintf("Free last 14 KB\n");
 		//Free last 14 KB
 		{
 			freeFrames = sys_calculate_free_frames() ;

@@ -22,10 +22,6 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	  if(returned_address == NULL){
 		  panic("Kernel panic");
 	  }
-	  if (e->page_last_WS_index == e->page_WS_max_size || LIST_SIZE(&(e->page_WS_list)) == e->page_WS_max_size
-			  || e->page_last_WS_element != NULL){
-		panic("Kernel panic");
-	  }
 	  struct WorkingSetElement* obj_ws;
 	 obj_ws = (struct WorkingSetElement*)returned_address;
 	//obj_ws->empty = 0;

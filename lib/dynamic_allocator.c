@@ -168,46 +168,51 @@ void *alloc_block_FF(uint32 size)
 				return address;
 			}
 		}
-		else if(list_iterator->is_free == 1 && list_iterator->size < size_to_be_allocated){
-			if(list_iterator != LIST_LAST(&myListOfBlocks)){
-				uint32 wanted_size = size_to_be_allocated - list_iterator->size;
-				if(list_iterator->prev_next_info.le_next->is_free == 1 && list_iterator->size >= wanted_size){
-					struct BlockMetaData* next_block = list_iterator->prev_next_info.le_next;
-					uint32 remaining_size = next_block->size - wanted_size;
-					if(remaining_size > (uint32)sizeOfMetaData()){
-						list_iterator->is_free = 0;
-						list_iterator->size = size_to_be_allocated;
-						//struct BlockMetaData* new_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
-						next_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
-						next_block->is_free = 1;
-						next_block->size = remaining_size;
-						found = 1;
-						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
-						return address;
-					}
-					else{
-						list_iterator->is_free = 0;
-						list_iterator->size = size_to_be_allocated + remaining_size;
-						next_block->is_free = 0;
-						next_block->size = 0;
-						LIST_REMOVE(&myListOfBlocks, next_block);
-						found = 1;
-						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
-						return address;
-					}
-				}
-				else{
-					list_iterator = list_iterator->prev_next_info.le_next;
-					found = 0;
-					continue;
-				}
-			}
-		}
-		else if(list_iterator->is_free == 0){
+		else{
 			list_iterator = list_iterator->prev_next_info.le_next;
 			found = 0;
 			continue;
 		}
+//		else if(list_iterator->is_free == 1 && list_iterator->size < size_to_be_allocated){
+//			if(list_iterator != LIST_LAST(&myListOfBlocks)){
+//				uint32 wanted_size = size_to_be_allocated - list_iterator->size;
+//				if(list_iterator->prev_next_info.le_next->is_free == 1 && list_iterator->size >= wanted_size){
+//					struct BlockMetaData* next_block = list_iterator->prev_next_info.le_next;
+//					uint32 remaining_size = next_block->size - wanted_size;
+//					if(remaining_size > (uint32)sizeOfMetaData()){
+//						list_iterator->is_free = 0;
+//						list_iterator->size = size_to_be_allocated;
+//						//struct BlockMetaData* new_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
+//						next_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
+//						next_block->is_free = 1;
+//						next_block->size = remaining_size;
+//						found = 1;
+//						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
+//						return address;
+//					}
+//					else{
+//						list_iterator->is_free = 0;
+//						list_iterator->size = size_to_be_allocated + remaining_size;
+//						next_block->is_free = 0;
+//						next_block->size = 0;
+//						LIST_REMOVE(&myListOfBlocks, next_block);
+//						found = 1;
+//						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
+//						return address;
+//					}
+//				}
+//				else{
+//					list_iterator = list_iterator->prev_next_info.le_next;
+//					found = 0;
+//					continue;
+//				}
+//			}
+//		}
+//		else if(list_iterator->is_free == 0){
+//			list_iterator = list_iterator->prev_next_info.le_next;
+//			found = 0;
+//			continue;
+//		}
 	}
 
 	if(found == 0){
