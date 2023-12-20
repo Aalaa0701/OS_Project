@@ -58,10 +58,11 @@ void* sbrk(int increment)
 	 */
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
 	uint32 previous_break= segment_break;
-	if(increment > (segment_break - hard_limit)|| segment_break == hard_limit){
-		panic("exceeded the limit");
-	}
+
 		if (increment >0 && increment <= (segment_break - hard_limit)){
+			if(increment > (segment_break - hard_limit)|| segment_break == hard_limit){
+				panic("exceeded the limit");
+			}
 			if (increment % PAGE_SIZE==0){
 				segment_break += increment;
 				for(uint32 i=previous_break ;i<segment_break;i+=PAGE_SIZE){
@@ -97,29 +98,42 @@ void* sbrk(int increment)
 			return (void *)segment_break;
 		}
 		else{
+			cprintf("increment is negative\n");
+			cprintf("segment break before: %x\n",segment_break);
 			segment_break +=increment;
-			if((uint32)increment < PAGE_SIZE){
+//			cprintf("segment break after: %x\n",segment_break);
+//			cprintf("page size: %d\n", PAGE_SIZE);
+//			cprintf("decrement: %d\n",increment);
+//			cprintf("->> %d\n",(uint32)increment);
+
+			if(increment < PAGE_SIZE){
+				cprintf("decrement is less than page size\n");
 				if(segment_break % PAGE_SIZE ==0){
 					unmap_frame(ptr_page_directory,previous_break);
 				}
 			}
 
-			else if((uint32)increment > PAGE_SIZE){
+			else if(increment > PAGE_SIZE){
+				cprintf("decrement is greater than page size\n");
 				int noOfPages= (uint32)increment/PAGE_SIZE;
 				uint32 *ptr_page_table = NULL;
+				cprintf("noOfPages: %d\n",noOfPages);
 				for(int i=0;i<noOfPages;i++){
 					struct FrameInfo* deleted = get_frame_info(ptr_page_directory, previous_break, &ptr_page_table);
+					cprintf("deleted: %d\n", deleted);
 					deleted->va = 0;
 					unmap_frame(ptr_page_directory,previous_break);
 					previous_break-=PAGE_SIZE;
 				}
 			}
 			else{
+				cprintf("decrement is equal\n");
 				uint32 *ptr_page_table = NULL;
 				struct FrameInfo* deleted = get_frame_info(ptr_page_directory, previous_break, &ptr_page_table);
 				deleted->va = 0;
 				unmap_frame(ptr_page_directory,previous_break);
 			}
+			cprintf("before return\n");
 			return (void*) segment_break;
 		}
 

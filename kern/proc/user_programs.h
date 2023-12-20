@@ -70,7 +70,7 @@ DECLARE_START_OF(tst_syscalls_2);
 DECLARE_START_OF(tst_syscalls_2_slave1);
 DECLARE_START_OF(tst_syscalls_2_slave2);
 DECLARE_START_OF(tst_syscalls_2_slave3);
-
+DECLARE_START_OF(tu_sbrk);
 //MS3
 DECLARE_START_OF(tst_page_replacement_alloc)
 DECLARE_START_OF(tst_page_replacement_stack)

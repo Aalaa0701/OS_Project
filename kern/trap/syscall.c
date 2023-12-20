@@ -483,6 +483,95 @@ void sys_bypassPageFault(uint8 instrLength)
 /* DYNAMIC ALLOCATOR SYSTEM CALLS */
 /**********************************/
 /*2024*/
+//void* sys_sbrk(int increment)
+//{
+//	//TODO: [PROJECT'23.MS2 - #08] [2] USER HEAP - Block Allocator - sys_sbrk() [Kernel Side]
+//	//MS2: COMMENT THIS LINE BEFORE START CODING====
+//	//====================================================
+//
+//	/*2023*/
+//	/* increment > 0: move the segment break of the current user program to increase the size of its heap,
+//	 * 				you should allocate NOTHING,
+//	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
+//	 * increment = 0: just return the current position of the segment break
+//	 * increment < 0: move the segment break of the current user program to decrease the size of its heap,
+//	 * 				you should deallocate pages that no longer contain part of the heap as necessary.
+//	 * 				and returns the address of the new break (i.e. the end of the current heap space).
+//	 *
+//	 * NOTES:
+//	 * 	1) You should only have to allocate or deallocate pages if the segment break crosses a page boundary
+//	 * 	2) New segment break should be aligned on page-boundary to avoid "No Man's Land" problem
+//	 * 	3) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
+//	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
+//	 * 	4) Allocating additional pages for a process heap will fail if, for example, the free frames are exhausted
+//	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
+//	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
+//	 * 		You might have to undo any operations you have done so far in this case.
+//	 */
+//	struct Env* env = curenv; //the current running Environment to adjust its break limit
+//	uint32 previous_break= env->segment_break;
+//	if(increment > (env->segment_break - env->hard_limit ) || env->segment_break == env->hard_limit) {
+//		return(void*) -1;
+//	}
+//		if(increment>0 && increment <(env->segment_break - env->hard_limit)){
+//			if (increment % PAGE_SIZE==0){
+//				env->segment_break += increment;
+//				uint32* page_table_ptr = NULL;
+//				for(uint32 i = previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+//					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
+//					if(result == TABLE_NOT_EXIST){
+//						page_table_ptr = create_page_table(curenv->env_page_directory, i);
+//					}
+//					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+//
+//				}
+//				return (void*) previous_break;
+//			}
+//			else{
+//				int counter=0;
+//				for(int i=increment; i%PAGE_SIZE!=0; i++){
+//						counter++;
+//				}
+//				env->segment_break += (increment+counter);
+//				uint32* page_table_ptr = NULL;
+//				for(uint32 i=previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+//					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
+//					if(result == TABLE_NOT_EXIST){
+//						page_table_ptr = create_page_table(curenv->env_page_directory, i);
+//					}
+//					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
+//
+//				}
+//				return (void*)previous_break;
+//			}
+//		}
+//		else if(increment == 0){
+//			return (void*) env->segment_break;
+//		}
+//		else{
+//			env->segment_break +=increment;
+//			if((uint32)increment < PAGE_SIZE){
+//				if(env->segment_break % PAGE_SIZE ==0){
+//					unmap_frame(ptr_page_directory,previous_break);
+//				}
+//			}
+//
+//			else if((uint32)increment > PAGE_SIZE){
+//				int noOfPages= (uint32)increment/PAGE_SIZE;
+//				for(int i=0;i<noOfPages;i++){
+//					unmap_frame(ptr_page_directory,previous_break);
+//					previous_break-=PAGE_SIZE;
+//				}
+//			}
+//			else{
+//				unmap_frame(ptr_page_directory,previous_break);
+//			}
+//			return (void*) env->segment_break;
+//		}
+//
+//
+//}
+
 void* sys_sbrk(int increment)
 {
 	//TODO: [PROJECT'23.MS2 - #08] [2] USER HEAP - Block Allocator - sys_sbrk() [Kernel Side]
@@ -598,6 +687,7 @@ void* sys_sbrk(int increment)
 
 
 }
+
 void* sys_limit(){
 	uint32 address = curenv->hard_limit;
 	return (void*)address;
