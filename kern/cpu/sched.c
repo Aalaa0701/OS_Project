@@ -263,6 +263,19 @@ void clock_interrupt_handler()
 		fixed_point_t fixed_one = fix_int(one_var);
 		curenv->recentCPU = fix_add(prev_cpu, fixed_one);
 		if(ticks % 4 == 0 && ticks > 0){
+
+			fixed_point_t current_recent_cpu_division = fix_unscale(curenv->recentCPU, 4);
+			int current_nice_multiplication = curenv->nice * 2;
+			int current_recent_cpu_int = fix_trunc(current_recent_cpu_division);
+			int current_new_priority = PRI_MAX - current_recent_cpu_int - current_nice_multiplication;
+			if(current_new_priority > PRI_MAX){
+				current_new_priority = PRI_MAX;
+			}
+			if(current_new_priority < PRI_MIN){
+				current_new_priority = PRI_MIN;
+			}
+			curenv->priority = current_new_priority;
+
 			for(int i = 0; i < num_of_ready_queues; i++){
 				for(int j = 0; j < queue_size(&(env_ready_queues[i])); j++){
 					struct Env* dequeued_env = dequeue(&(env_ready_queues[i]));
