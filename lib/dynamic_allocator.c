@@ -621,18 +621,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 {
 	//TODO: [PROJECT'23.MS1 - #8] [3] DYNAMIC ALLOCATOR - realloc_block_FF()
 	//panic("realloc_block_FF is not implemented yet");
-	void* new_address = va - sizeOfMetaData();
-	struct BlockMetaData* currentBlockMetaData = new_address;
-	struct BlockMetaData* nextBlockMetaData;
-	nextBlockMetaData = LIST_NEXT(currentBlockMetaData);
-	uint32 increased_size = -1;
-	uint32 decreased_size = -1;
-	if(new_size > currentBlockMetaData->size){
-		increased_size = new_size - currentBlockMetaData->size + (unsigned int)sizeOfMetaData();
-	}
-	else if(new_size < currentBlockMetaData->size){
-		decreased_size = currentBlockMetaData->size - new_size - (unsigned int)sizeOfMetaData();
-	}
 
 	if(new_size == 0){
 		free_block(va);
@@ -645,111 +633,197 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		return alloc_block_FF(new_size);
 	}
 	else{
+		void* new_address = va - sizeOfMetaData();
+		struct BlockMetaData* currentBlockMetaData = new_address;
+		struct BlockMetaData* nextBlockMetaData;
+		nextBlockMetaData = LIST_NEXT(currentBlockMetaData);
+		uint32 increased_size = -1;
+		uint32 decreased_size = -1;
+		uint32 real_size = currentBlockMetaData->size - (unsigned int)sizeOfMetaData();
+		if(new_size > real_size){
+			increased_size = new_size - real_size;
+		}
+		else if(new_size < real_size){
+			decreased_size = real_size - new_size;
+		}
+		else{
+			return va;
+		}
+//		if(currentBlockMetaData->size == 1052){
+//			cprintf("address of block is: %x\n", currentBlockMetaData);
+//			cprintf("address of new_va is: %x\n", va);
+//		}
+
+//		cprintf("new_size: %d\n", new_size);
+//		cprintf("original_size: %d\n", currentBlockMetaData->size);
 		// case -> size increased
 		if(increased_size != -1){
 			// case block not last element and not first
 			if(currentBlockMetaData != LIST_LAST(&myListOfBlocks) && currentBlockMetaData != LIST_LAST(&myListOfBlocks)){
 				// case next not free
+				uint32 next_size = nextBlockMetaData->size;
+				void* next_address = (struct BlockMetaData*)((unsigned int)nextBlockMetaData + (unsigned int)sizeOfMetaData());
 				if(nextBlockMetaData->is_free == 0){
-					currentBlockMetaData->is_free = 1;
-					return alloc_block_FF(new_size);
+					//currentBlockMetaData->is_free = 1;
+					short *new_start = va;
+	                short *new_mid = va + real_size/2;
+	                short *new_end = va + real_size - sizeof(short);
+					short* returned_address = alloc_block_FF(new_size);
+					if(returned_address == 0){
+						return va;
+					}
+	                short *returned_mid = (short*)((unsigned int)returned_address + real_size/2);
+	                short *returned_end = (short*)((unsigned int)returned_address + real_size - sizeof(short));
+					*(returned_address) = *(new_start);
+					*(returned_mid) = *(new_start);
+					*(returned_end) = *(new_start);
+					free_block(va);
+					return returned_address;
 				}
 				// case next free
 				else{
 					// case next has more size
 					if(nextBlockMetaData->size > increased_size){
-						if(nextBlockMetaData->size - increased_size >= sizeOfMetaData()){
+						if(nextBlockMetaData->size - increased_size > sizeOfMetaData()){
+
 							uint32 size_of_removed = nextBlockMetaData->size;
-							struct BlockMetaData* new_block;
-							new_block = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + (new_size + (unsigned int)sizeOfMetaData()));;
 							nextBlockMetaData->size = 0;
 							nextBlockMetaData->is_free = 0;
-							currentBlockMetaData->size += increased_size;
-							struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-							next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-							currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
+							LIST_REMOVE(&myListOfBlocks, nextBlockMetaData);
+							 struct BlockMetaData* new_block = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + new_size + (unsigned int)sizeOfMetaData());
+
+							currentBlockMetaData->size = new_size + (unsigned int)sizeOfMetaData();
 							LIST_INSERT_AFTER(&myListOfBlocks, currentBlockMetaData, new_block);
 							new_block->size = size_of_removed - increased_size;
 							new_block->is_free = 1;
 							return va;
 						}
 						else{
-							currentBlockMetaData->size += increased_size;
-							struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-							next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-							currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
+							uint32 remaining_size = nextBlockMetaData->size - increased_size;
+							currentBlockMetaData->size += increased_size + remaining_size;
+							free_block(next_address);
 							return va;
-						}
-
-					}
-					// case size is equal
-					else if(nextBlockMetaData->size == increased_size - (unsigned int)sizeOfMetaData()){
-						currentBlockMetaData->size += increased_size;
-						nextBlockMetaData->is_free = 0;
-						nextBlockMetaData->size = 0;
-						struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-						next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-						currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
-						return va;
-					}
-					// case size is less
-					else{
-						currentBlockMetaData->is_free = 1;
-						return alloc_block_FF(new_size);
-					}
-					return va;
-				}
-			}
-			// case element is first
-			else if(currentBlockMetaData == LIST_FIRST(&myListOfBlocks)){
-				// case next is free
-				if(nextBlockMetaData->is_free == 1){
-					//logic
-					if(nextBlockMetaData->size > increased_size){
-						if(nextBlockMetaData->size - increased_size >= sizeOfMetaData()){
-							nextBlockMetaData->size -= increased_size;
-							currentBlockMetaData->size += increased_size;
-							struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-							next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-							currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
-							nextBlockMetaData = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + (new_size + (unsigned int)sizeOfMetaData()));
-							LIST_INSERT_AFTER(&myListOfBlocks, currentBlockMetaData, nextBlockMetaData);
-						}
-						else{
-							currentBlockMetaData->size += increased_size;
-							struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-							next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-							currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
 						}
 
 					}
 					// case size is equal
 					else if(nextBlockMetaData->size == increased_size){
 						currentBlockMetaData->size += increased_size;
-						nextBlockMetaData->is_free = 0;
-						nextBlockMetaData->size = 0;
-						struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-						next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-						currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
+						free_block(next_address);
+//						nextBlockMetaData->is_free = 0;
+//						nextBlockMetaData->size = 0;
 						return va;
 					}
 					// case size is less
 					else{
-						currentBlockMetaData->is_free = 1;
-						return alloc_block_FF(new_size);
+						short *new_start = va;
+		                short *new_mid = va + real_size/2;
+		                short *new_end = va + real_size - sizeof(short);
+						short* returned_address = alloc_block_FF(new_size);
+						if(returned_address == 0){
+							return va;
+						}
+		                short *returned_mid = (short*)((unsigned int)returned_address + real_size/2);
+		                short *returned_end = (short*)((unsigned int)returned_address + real_size - sizeof(short));
+						*(returned_address) = *(new_start);
+						*(returned_mid) = *(new_start);
+						*(returned_end) = *(new_start);
+						free_block(va);
+						return returned_address;
+					}
+					return va;
+				}
+			}
+			// case element is first
+			else if(currentBlockMetaData == LIST_FIRST(&myListOfBlocks)){
+				void* next_address = (struct BlockMetaData*)((unsigned int)nextBlockMetaData + (unsigned int)sizeOfMetaData());
+				// case next is free
+				if(nextBlockMetaData->is_free == 1){
+					//logic
+					if(nextBlockMetaData->size > increased_size){
+						if(nextBlockMetaData->size - increased_size > sizeOfMetaData()){
+
+							uint32 size_of_removed = nextBlockMetaData->size;
+							nextBlockMetaData->size = 0;
+							nextBlockMetaData->is_free = 0;
+							LIST_REMOVE(&myListOfBlocks, nextBlockMetaData);
+							 struct BlockMetaData* new_block = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + new_size + (unsigned int)sizeOfMetaData());
+
+							currentBlockMetaData->size = new_size + (unsigned int)sizeOfMetaData();
+							LIST_INSERT_AFTER(&myListOfBlocks, currentBlockMetaData, new_block);
+							new_block->size = size_of_removed - increased_size;
+							new_block->is_free = 1;
+							return va;
+						}
+						else{
+							uint32 remaining_size = nextBlockMetaData->size - increased_size;
+							currentBlockMetaData->size += increased_size + remaining_size;
+							free_block(next_address);
+							return va;
+						}
+
+					}
+					// case size is equal
+					else if(nextBlockMetaData->size == increased_size){
+						currentBlockMetaData->size += increased_size;
+						free_block(next_address);
+//						nextBlockMetaData->is_free = 0;
+//						nextBlockMetaData->size = 0;
+						return va;
+					}
+					// case size is less
+					else{
+						short *new_start = va;
+		                short *new_mid = va + real_size/2;
+		                short *new_end = va + real_size - sizeof(short);
+						short* returned_address = alloc_block_FF(new_size);
+						if(returned_address == 0){
+							return va;
+						}
+		                short *returned_mid = (short*)((unsigned int)returned_address + real_size/2);
+		                short *returned_end = (short*)((unsigned int)returned_address + real_size - sizeof(short));
+						*(returned_address) = *(new_start);
+						*(returned_mid) = *(new_start);
+						*(returned_end) = *(new_start);
+						free_block(va);
+						return returned_address;
 					}
 					return va;
 				}
 				// case next not free
 				else{
-					currentBlockMetaData->is_free = 1;
-					return alloc_block_FF(new_size);
+					short *new_start = va;
+	                short *new_mid = va + real_size/2;
+	                short *new_end = va + real_size - sizeof(short);
+					short* returned_address = alloc_block_FF(new_size);
+					if(returned_address == 0){
+						return va;
+					}
+	                short *returned_mid = (short*)((unsigned int)returned_address + real_size/2);
+	                short *returned_end = (short*)((unsigned int)returned_address + real_size - sizeof(short));
+					*(returned_address) = *(new_start);
+					*(returned_mid) = *(new_start);
+					*(returned_end) = *(new_start);
+					free_block(va);
+					return returned_address;
 				}
 			}
 			// case element is last
 			else if(currentBlockMetaData == LIST_LAST(&myListOfBlocks)){
-				currentBlockMetaData->is_free = 1;
-				return alloc_block_FF(new_size);
+				short *new_start = va;
+                short *new_mid = va + real_size/2;
+                short *new_end = va + real_size - sizeof(short);
+				short* returned_address = alloc_block_FF(new_size);
+				if(returned_address == 0){
+					return va;
+				}
+                short *returned_mid = (short*)((unsigned int)returned_address + real_size/2);
+                short *returned_end = (short*)((unsigned int)returned_address + real_size - sizeof(short));
+				*(returned_address) = *(new_start);
+				*(returned_mid) = *(new_start);
+				*(returned_end) = *(new_start);
+				free_block(va);
+				return returned_address;
 			}
 
 		}
@@ -759,13 +833,14 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			if(currentBlockMetaData != LIST_LAST(&myListOfBlocks) && currentBlockMetaData != LIST_FIRST(&myListOfBlocks)){
 				// case next is free
 				if(nextBlockMetaData->is_free == 1){
-					nextBlockMetaData->size += decreased_size;
+					uint32 next_size = nextBlockMetaData->size;
+					void* next_address = (struct BlockMetaData*)((unsigned int)nextBlockMetaData + (unsigned int)sizeOfMetaData());
+					free_block(next_address);
+					struct BlockMetaData* new_free_block = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + (unsigned int)sizeOfMetaData() + new_size);
+					new_free_block->is_free = 1;
+					new_free_block->size = next_size + decreased_size;
 					currentBlockMetaData->size -= decreased_size;
-					struct BlockMetaData* next_nextBlockMetaData = nextBlockMetaData->prev_next_info.le_next;
-					next_nextBlockMetaData->prev_next_info.le_prev = currentBlockMetaData;
-					currentBlockMetaData->prev_next_info.le_next = next_nextBlockMetaData;
-					nextBlockMetaData = (struct BlockMetaData*)((unsigned int)currentBlockMetaData + currentBlockMetaData->size);
-					LIST_INSERT_AFTER(&myListOfBlocks, currentBlockMetaData, nextBlockMetaData);
+					LIST_INSERT_AFTER(&myListOfBlocks, currentBlockMetaData, new_free_block);
 					return va;
 				}
 				// case next not free
