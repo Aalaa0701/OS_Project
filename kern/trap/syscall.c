@@ -602,7 +602,9 @@ void* sys_limit(){
 	uint32 address = curenv->hard_limit;
 	return (void*)address;
 }
-
+void sys_env_set_nice(int nice){
+	env_set_nice(curenv, nice);
+}
 
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
@@ -616,6 +618,9 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	{
 	/*2023*/
 	//TODO: [PROJECT'23.MS1 - #4] [2] SYSTEM CALLS - Add suitable code here
+	case SYS_env_set_nice:
+		sys_env_set_nice(a1);
+		break;
 	case SYS_get_permissions:
 		return sys_get_permissions(a1);
 		break;

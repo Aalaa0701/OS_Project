@@ -80,6 +80,7 @@ uint32 	sys_isUHeapPlacementStrategyWORSTFIT();
 void 	sys_set_uheap_strategy(uint32 heapStrategy);
 uint32 sys_get_permissions(uint32 virtual_address);
 void* sys_limit();
+void sys_env_set_nice(int nice);
 //Page File
 int 	sys_pf_calculate_allocated_pages(void);
 

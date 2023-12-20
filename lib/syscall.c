@@ -362,4 +362,6 @@ void* sys_limit()
 uint32 sys_get_permissions(uint32 virtual_address){
 	return syscall(SYS_get_permissions, virtual_address, 0, 0, 0, 0);
 }
-
+void sys_env_set_nice(int nice){
+	syscall(SYS_env_set_nice, nice, 0, 0, 0, 0);
+}

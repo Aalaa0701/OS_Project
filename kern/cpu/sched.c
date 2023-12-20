@@ -205,7 +205,6 @@ struct Env* fos_scheduler_BSD()
 	//TODO: [PROJECT'23.MS3 - #5] [2] BSD SCHEDULER - fos_scheduler_BSD
 	//Your code is here
 	//Comment the following line
-//		cprintf("scheduler is called\n");
 		if(curenv != NULL){
 			int curenv_priority = curenv->priority;
 			enqueue(&env_ready_queues[PRI_MAX - curenv_priority], curenv);
@@ -214,19 +213,12 @@ struct Env* fos_scheduler_BSD()
 	    for(int i = 0; i < num_of_ready_queues; i++){
 	        if(env_ready_queues[i].size != 0){
 	        	struct Env* current_env = dequeue(&env_ready_queues[i]);
-	        	//LIST_REMOVE(&env_ready_queues[i], current_env);
 	        	if(current_env == NULL){
 	        		found = 0;
-	//        		cprintf("null env\n");
 	        		continue;
 	        	}
 	        	found = 1;
-	//        	cprintf("dequeued\n");
-	//			cprintf("new priority in loop %d\n", current_env->priority);
-	//			cprintf("id %d\n", current_env->env_id);
-	//			cprintf("current cpu %d\n", current_env->recentCPU);
 				kclock_set_quantum(quantums[0]);
-	        	//enqueue(&env_ready_queues[PRI_MAX - current_env->priority], current_env);
 	            return current_env;
 	        }
 	        else{
@@ -339,140 +331,6 @@ void clock_interrupt_handler()
 			//blocked
 
 		}
-
-
-
-
-
-//		uint8 quantum = quantums[0];
-//		uint32 quantamised_ticks_current = quantum * ticks;
-//		uint32 quantamised_ticks_before = quantum * (ticks - 1);
-//		uint32 current_division = quantamised_ticks_current / 1000;
-//		uint32 before_division = quantamised_ticks_before / 1000;
-//		uint32 rounded_current = ROUNDDOWN(current_division, 1);
-//		uint32 rounded_before;
-//		if((int)quantamised_ticks_before > 0){
-//			rounded_before = ROUNDDOWN(before_division, 1);
-//		}
-//		else{
-//			rounded_before = 0;
-//		}
-//
-//		//every tick
-//		//recent cpu for running process
-//		fixed_point_t prev_cpu = curenv->recentCPU;
-//	    int one_var = 1;
-//	    fixed_point_t fixed_one = fix_int(one_var);
-//		curenv->recentCPU = fix_add(prev_cpu, fixed_one);
-//		//every 4th tick
-//		if(ticks % 4 == 0 && ticks > 0){
-//			if (scheduler_method == SCH_RR){
-//
-//			}
-//			else{
-////				fixed_point_t curenv_recent_cpu_division = fix_unscale(curenv->recentCPU, 4);
-////				int curenv_nice_multiplication = curenv->nice * 2;
-////				int curenv_recent_cpu_int = fix_trunc(curenv_recent_cpu_division);
-////				int curenv_new_priority = PRI_MAX - curenv_recent_cpu_int - curenv_nice_multiplication;
-////				curenv->priority = curenv_new_priority;
-////				enqueue(&env_ready_queues[PRI_MAX - curenv_new_priority], curenv);
-////				cprintf("4th tick\n");
-////				cprintf("num of ready queues: %d\n", num_of_ready_queues);
-//			}
-//
-//			for(int i = 0; i < num_of_ready_queues; i++){
-//				if(env_ready_queues[i].size == 0){
-//					continue;
-//				}
-//				if (scheduler_method == SCH_RR){
-//
-//				}
-//				else{
-////					for(int j = 0; j < env_ready_queues[i].size; j++){
-////	//					cprintf("size of queue: %d\n", env_ready_queues[i].size);
-////						struct Env* ready_env = dequeue(&env_ready_queues[i]);
-////						if(ready_env == NULL){
-////							continue;
-////						}
-////						fixed_point_t recent_cpu_division = fix_unscale(ready_env->recentCPU, 4);
-////						int nice_multiplication = ready_env->nice * 2;
-////						int recent_cpu_int = fix_trunc(recent_cpu_division);
-////						int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
-////						if(new_priority > PRI_MAX){
-////							new_priority = PRI_MAX;
-////						}
-////						if(new_priority < PRI_MIN){
-////							new_priority = PRI_MIN;
-////						}
-////
-////						ready_env->priority = new_priority;
-////	//					cprintf("new priority in loop %d\n", new_priority);
-////	//					cprintf("id %d\n", ready_env->env_id);
-////						enqueue(&env_ready_queues[PRI_MAX - new_priority], ready_env);
-//					//}
-//				}
-////				fixed_point_t recent_cpu_division = fix_scale(curenv->recentCPU, 4);
-////				int nice_multiplication = curenv->nice * 2;
-////				int recent_cpu_int = fix_trunc(recent_cpu_division);
-////				int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
-////				if(new_priority > PRI_MAX){
-////					new_priority = PRI_MAX;
-////				}
-////				if(new_priority < PRI_MIN){
-////					new_priority = PRI_MIN;
-////				}
-////	//			cprintf("new priority after loop%d\n", new_priority);
-////	//			cprintf("id %d\n", curenv->env_id);
-////				curenv->priority = new_priority;
-////				enqueue(&env_ready_queues[PRI_MAX - new_priority], curenv);
-//				}
-//
-//		}
-//		//every second
-//		if(rounded_current != rounded_before && rounded_before > 0){
-//			cprintf("second passed\n");
-//			//recent cpu of every process & load avg
-//			//running process
-//			//load avg = loadavg * 59/60 + 1/60 * ready
-//			uint32 num_of_ready = 1;
-//			for(int i = 0; i < num_of_ready_queues; i++){
-//				num_of_ready += queue_size(&env_ready_queues[i]);
-//			}
-//			fixed_point_t prev_load = loadAVG;
-//			int first_int = 59 / 60;
-//			fixed_point_t first = fix_int(first_int);
-//			int second_int = 1 / 60;
-//			fixed_point_t second = fix_int(second_int);
-//			fixed_point_t first_multiplication = fix_mul(first, prev_load);
-//			fixed_point_t second_multiplication = fix_scale(second, num_of_ready);
-//			loadAVG = fix_add(first_multiplication, second_multiplication);
-//			//recent cpu for every process -> (((loadavg * 2)/(loadavg * 2)+1)*recent cpu )+ nice;
-//			//running
-//		    int two_var = 2;
-//		    fixed_point_t fixed_two = fix_int(two_var);
-//		    fixed_point_t avg_multiplied = fix_mul(loadAVG, fixed_two);
-//		    fixed_point_t avg_multiplied_added = fix_add(avg_multiplied, fixed_one);
-//		    fixed_point_t division = fix_div(avg_multiplied, avg_multiplied_added);
-//		    fixed_point_t new_prev_cpu = curenv->recentCPU;
-//		    fixed_point_t coefficient_multiplication = fix_mul(division, new_prev_cpu);
-//		    int nice_var = curenv->nice;
-//		    fixed_point_t fixed_nice = fix_int(nice_var);
-//			curenv->recentCPU = fix_add(coefficient_multiplication, fixed_nice);
-//			//ready
-//			for(int i = 0; i < num_of_ready_queues; i++){
-//				for(int j = 0; j < queue_size(&env_ready_queues[i]); j++){
-//					struct Env* edited_env = dequeue(&env_ready_queues[i]);
-//					fixed_point_t loop_prev_cpu = edited_env->recentCPU;
-//					fixed_point_t new_coefficient_multiplication = fix_mul(division, loop_prev_cpu);
-//				    int loop_nice_var = edited_env->nice;
-//				    fixed_point_t fixed_loop_nice = fix_int(loop_nice_var);
-//				    edited_env->recentCPU = fix_add(new_coefficient_multiplication, fixed_loop_nice);
-//				    enqueue(&env_ready_queues[i], edited_env);
-//				}
-//			}
-//			//blocked
-//
-//		}
 
 
 	}

@@ -557,19 +557,22 @@ void env_set_nice(struct Env* e, int nice_value)
     e->nice = nice_value;
     if(e->env_status != ENV_NEW){
         fixed_point_t res = fix_unscale(e->recentCPU,4);
-        fixed_point_t fixedNice = fix_int(e->nice * 2);
-        fixed_point_t fixedprimax = fix_int(PRI_MAX);
-        fixed_point_t fixedpriority = fix_int(e->priority);
-        fixed_point_t firstsub = fix_sub(fixedprimax ,res);
-        fixedpriority =  fix_sub(firstsub,fixedNice);
-        int new_priority = fix_trunc(fixedpriority);
+        int nice_multiplication = e->nice * 2;
+        int recent_cpu_division = fix_trunc(res);
+        int new_priority = PRI_MAX - recent_cpu_division - nice_multiplication;
+//        fixed_point_t fixedNice = fix_int(e->nice * 2);
+//        fixed_point_t fixedprimax = fix_int(PRI_MAX);
+//        fixed_point_t fixedpriority = fix_int(e->priority);
+//        fixed_point_t firstsub = fix_sub(fixedprimax ,res);
+//        fixedpriority =  fix_sub(firstsub,fixedNice);
+//        int new_priority = fix_trunc(fixedpriority);
     	if(new_priority > PRI_MAX){
     		new_priority = PRI_MAX;
     	}
     	if(new_priority < PRI_MIN){
     		new_priority = PRI_MIN;
     	}
-        fix_round(fixedpriority);
+//        fix_round(fixedpriority);
         e->priority = new_priority;
     }
 }
