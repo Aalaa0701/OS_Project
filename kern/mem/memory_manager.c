@@ -149,10 +149,41 @@ int allocate_frame(struct FrameInfo **ptr_frame_info)
 	if (*ptr_frame_info == NULL)
 	{
 		//TODO: [PROJECT'23.MS3 - BONUS] Free RAM when it's FULL
-		panic("ERROR: Kernel run out of memory... allocate_frame cannot find a free frame.\n");
 		// When allocating new frame, if there's no free frame, then you should:
 		//	1-	If any process has exited (those with status ENV_EXIT), then remove one or more of these exited processes from the main memory
 		//	2-	otherwise, free at least 1 frame from the user working set by applying the FIFO algorithm
+		uint32 size_of_exit_queue = queue_size(&env_exit_queue);
+		if(size_of_exit_queue > 0){
+			struct Env* removed_env = dequeue(&env_exit_queue);
+			kfree(removed_env);
+			sched_remove_exit(removed_env);
+		}
+		else{
+			if(isPageReplacmentAlgorithmLRU(PG_REP_LRU_LISTS_APPROX)){
+				//ready
+				for(int i = 0; i < num_of_ready_queues; i++){
+					uint32 size_of_ready = queue_size(&env_ready_queues[i]);
+					for(int j = 0; j < size_of_ready; j++){
+						struct Env* ready_env = dequeue(&env_ready_queues[i]);
+						if(ready_env == NULL){
+							continue;
+						}
+						uint32 released_address = LIST_LAST(&(ready_env->SecondList))->virtual_address;
+						struct WorkingSetElement* released_ws = LIST_LAST(&(ready_env->SecondList));
+						LIST_REMOVE(&(ready_env->SecondList), released_ws);
+						unmap_frame(ready_env->env_page_directory, released_address);
+						kfree(released_ws);
+						enqueue(env_ready_queues, ready_env);
+					}
+				}
+				//running
+				uint32 released_address = LIST_LAST(&(curenv->SecondList))->virtual_address;
+				struct WorkingSetElement* released_ws = LIST_LAST(&(curenv->SecondList));
+				LIST_REMOVE(&(curenv->SecondList), released_ws);
+				unmap_frame(curenv->env_page_directory, released_address);
+				kfree(released_ws);
+			}
+		}
 	}
 
 	LIST_REMOVE(&free_frame_list,*ptr_frame_info);

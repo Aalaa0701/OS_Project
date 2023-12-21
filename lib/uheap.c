@@ -6,7 +6,7 @@
 #define pages_in_user_heap (((unsigned int)USER_HEAP_MAX - ((unsigned int)USER_HEAP_START + (unsigned int)DYN_ALLOC_MAX_SIZE) + (unsigned int)PAGE_SIZE)/PAGE_SIZE)
 uint32 pages_allocated_in_uheap = 0;
 int FirstTimeFlag = 1;
-uint32 save_pages[12280] = {0};//122881
+uint32 save_pages[122881] = {0};//122881
 void InitializeUHeap()
 {
 	if(FirstTimeFlag)

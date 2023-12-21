@@ -449,7 +449,71 @@ void env_free(struct Env *e)
 	//TODO: [PROJECT'23.MS3 - BONUS] EXIT ENV: env_free
 	// your code is here, remove the panic and write your code
 	{
-		panic("env_free() is not implemented yet...!!");
+		struct WorkingSetElement *ptr_ws_first = e->ActiveList.lh_first;
+		struct WorkingSetElement *ptr_ws_sec = e->SecondList.lh_first;
+		struct WorkingSetElement *ptr_FIFO = e->page_WS_list.lh_first;
+		uint32 page_ws_size = LIST_SIZE(&(e->page_WS_list));
+		uint32 active_list_size = LIST_SIZE(&(e->ActiveList));
+		uint32 second_list_size = LIST_SIZE(&(e->SecondList));
+
+		if(isPageReplacmentAlgorithmFIFO()){
+			//remove pages from working set
+			for(int i = 0; i < page_ws_size; i++){
+				uint32 deleted_address = ptr_FIFO->virtual_address;
+				pt_clear_page_table_entry(e->env_page_directory, deleted_address);
+				unmap_frame(e->env_page_directory, deleted_address);
+				ptr_FIFO = ptr_FIFO->prev_next_info.le_next;
+				continue;
+			}
+			//remove working set
+			for(int i = 0; i < page_ws_size; i++){
+				struct WorkingSetElement* deleted_ws = LIST_FIRST(&(e->page_WS_list));
+				LIST_REMOVE(&(e->page_WS_list), deleted_ws);
+				kfree(deleted_ws);
+				continue;
+			}
+		}
+		if(isPageReplacmentAlgorithmLRU(PG_REP_LRU_LISTS_APPROX)){
+			//remove pages from active list
+			for(int i = 0; i < active_list_size; i++){
+				uint32 deleted_address = ptr_ws_first->virtual_address;
+				pt_clear_page_table_entry(e->env_page_directory, deleted_address);
+				unmap_frame(e->env_page_directory, deleted_address);
+				ptr_ws_first = ptr_ws_first->prev_next_info.le_next;
+				continue;
+			}
+			//remove active list
+			for(int i = 0; i < active_list_size; i++){
+				struct WorkingSetElement* deleted_ws = LIST_FIRST(&(e->ActiveList));
+				LIST_REMOVE(&(e->ActiveList), deleted_ws);
+				kfree(deleted_ws);
+				continue;
+			}
+			//remove pages from second list
+			for(int i = 0; i < second_list_size; i++){
+				uint32 deleted_address = ptr_ws_sec->virtual_address;
+				pt_clear_page_table_entry(e->env_page_directory, deleted_address);
+				unmap_frame(e->env_page_directory, deleted_address);
+				ptr_ws_sec = ptr_ws_sec->prev_next_info.le_next;
+				continue;
+			}
+			//remove second list
+			for(int i = 0; i < second_list_size; i++){
+				struct WorkingSetElement* deleted_ws = LIST_FIRST(&(e->SecondList));
+				LIST_REMOVE(&(e->SecondList), deleted_ws);
+				kfree(deleted_ws);
+				continue;
+			}
+
+		}
+		kfree(e->env_page_directory);
+		sched_insert_exit(e);
+
+
+
+
+
+
 
 
 

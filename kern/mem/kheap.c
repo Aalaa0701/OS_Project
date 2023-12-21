@@ -9,7 +9,7 @@
 #define start_of_page_allocator (hard_limit + (unsigned int)PAGE_SIZE) + 16384 - 20480)
 uint32 num_of_pages_allocated = 0;
 bool is_initialized_page = 0;
-
+uint32 page_boundary_tracking_decrement = 0;
 
 extern uint32 sys_calculate_free_frames() ;
 
@@ -63,6 +63,8 @@ void* sbrk(int increment)
 			if(increment > (segment_break - hard_limit)|| segment_break == hard_limit){
 				panic("exceeded the limit");
 			}
+			page_boundary_tracking_decrement = 0;
+
 			if (increment % PAGE_SIZE==0){
 				segment_break += increment;
 				for(uint32 i=previous_break ;i<segment_break;i+=PAGE_SIZE){
@@ -77,6 +79,17 @@ void* sbrk(int increment)
 				return (void *)previous_break;
 			}
 			else{
+				if(increment < PAGE_SIZE){
+					if(previous_break % PAGE_SIZE != 0){
+						segment_break = ROUNDDOWN(segment_break, PAGE_SIZE);
+					}
+				}
+				if(increment > PAGE_SIZE){
+					if(previous_break % PAGE_SIZE != 0){
+						segment_break = ROUNDUP(segment_break, PAGE_SIZE);
+					}
+				}
+//				page_boundary_tracking_increment += increment;
 				int counter=0;
 				for(int i=increment; i%PAGE_SIZE!=0; i++){
 					counter++;
@@ -98,42 +111,31 @@ void* sbrk(int increment)
 			return (void *)segment_break;
 		}
 		else{
-			cprintf("increment is negative\n");
-			cprintf("segment break before: %x\n",segment_break);
 			segment_break +=increment;
-//			cprintf("segment break after: %x\n",segment_break);
-//			cprintf("page size: %d\n", PAGE_SIZE);
-//			cprintf("decrement: %d\n",increment);
-//			cprintf("->> %d\n",(uint32)increment);
+			if((increment * -1) < PAGE_SIZE){
+				page_boundary_tracking_decrement += increment;
+				if(((int)page_boundary_tracking_decrement * -1) > PAGE_SIZE){
 
-			if(increment < PAGE_SIZE){
-				cprintf("decrement is less than page size\n");
-				if(segment_break % PAGE_SIZE ==0){
-					unmap_frame(ptr_page_directory,previous_break);
+					page_boundary_tracking_decrement += PAGE_SIZE;
+					uint32 page_removed = segment_break + (page_boundary_tracking_decrement * -1);
+					unmap_frame(ptr_page_directory,page_removed);
 				}
 			}
 
-			else if(increment > PAGE_SIZE){
-				cprintf("decrement is greater than page size\n");
-				int noOfPages= (uint32)increment/PAGE_SIZE;
+			else if((increment * -1) > PAGE_SIZE){
+				page_boundary_tracking_decrement += increment;
+				int noOfPages= (increment/PAGE_SIZE) * -1;
 				uint32 *ptr_page_table = NULL;
-				cprintf("noOfPages: %d\n",noOfPages);
+				uint32 offset = page_boundary_tracking_decrement + (noOfPages * PAGE_SIZE);
+				uint32 page_removed = segment_break + (offset * -1);
 				for(int i=0;i<noOfPages;i++){
-					struct FrameInfo* deleted = get_frame_info(ptr_page_directory, previous_break, &ptr_page_table);
-					cprintf("deleted: %d\n", deleted);
-					deleted->va = 0;
-					unmap_frame(ptr_page_directory,previous_break);
-					previous_break-=PAGE_SIZE;
+					unmap_frame(ptr_page_directory,page_removed);
+					page_removed+=PAGE_SIZE;
 				}
 			}
 			else{
-				cprintf("decrement is equal\n");
-				uint32 *ptr_page_table = NULL;
-				struct FrameInfo* deleted = get_frame_info(ptr_page_directory, previous_break, &ptr_page_table);
-				deleted->va = 0;
 				unmap_frame(ptr_page_directory,previous_break);
 			}
-			cprintf("before return\n");
 			return (void*) segment_break;
 		}
 
@@ -143,7 +145,6 @@ void* sbrk(int increment)
 
 
 }
-
 void* kmalloc(unsigned int size)
 {
 	//TODO: [PROJECT'23.MS2 - #03] [1] KERNEL HEAP - kmalloc()
@@ -388,7 +389,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//TODO: [PROJECT'23.MS2 - BONUS#1] [1] KERNEL HEAP - krealloc()
 	// Write your code here, remove the panic and write your code
 
-	if(new_size == 0){
+	if(new_size == 0 && virtual_address != NULL){
 		kfree(virtual_address);
 		return NULL;
 	}
@@ -422,78 +423,79 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		else{
 			new_num_of_pages = (new_size / PAGE_SIZE) + 1;
 		}
-		if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32)virtual_address < KERNEL_HEAP_START + DYN_ALLOC_MAX_SIZE){
-			return realloc_block_FF(virtual_address, new_size);
-		}
-		else if((uint32)virtual_address >= KERNEL_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE && (uint32)virtual_address < KERNEL_HEAP_MAX){
-			if(old_size < new_num_of_pages){
-				uint32 requested_size = new_num_of_pages - old_size;
-				uint32 end_of_pages = (uint32)virtual_address + ((uint32)PAGE_SIZE * old_size);
-				ptr_frame_info = get_frame_info(ptr_page_directory, end_of_pages, &ptr_page_table);
-				uint32 num_of_free_pages = 0;
-				uint32 found_address = 0;
-				if(ptr_frame_info == 0){
-					num_of_free_pages++;
-					int m = 1;
-					while(1 == 1){
-						ptr_frame_info = get_frame_info(ptr_page_directory, end_of_pages + ((uint32)PAGE_SIZE * m), &ptr_page_table);
-						if(ptr_frame_info == 0){
-							m++;
-							num_of_free_pages++;
-						}
-						else{
-							break;
-						}
-						if(num_of_free_pages == requested_size){
-							found_address = end_of_pages;
-							break;
-						}
-					}
-					if(num_of_free_pages > requested_size){
-						found_address = end_of_pages;
-					}
-					else if(num_of_free_pages == requested_size){
-						found_address = end_of_pages;
+		if(old_size < new_num_of_pages){
+			uint32 requested_size = new_num_of_pages - old_size;
+			uint32 end_of_pages = (uint32)virtual_address + ((uint32)PAGE_SIZE * old_size);
+			ptr_frame_info = get_frame_info(ptr_page_directory, end_of_pages, &ptr_page_table);
+			uint32 num_of_free_pages = 0;
+			uint32 found_address = 0;
+			if(ptr_frame_info == 0){
+				num_of_free_pages++;
+				int m = 1;
+				while(1 == 1){
+					ptr_frame_info = get_frame_info(ptr_page_directory, end_of_pages + ((uint32)PAGE_SIZE * m), &ptr_page_table);
+					if(ptr_frame_info == 0){
+						m++;
+						num_of_free_pages++;
 					}
 					else{
+						break;
+					}
+					if(num_of_free_pages == requested_size){
+						found_address = end_of_pages;
+						break;
+					}
+				}
+				if(num_of_free_pages > requested_size){
+					found_address = end_of_pages;
+				}
+				else if(num_of_free_pages == requested_size){
+					found_address = end_of_pages;
+				}
+				else{
+					void* new_address = kmalloc(new_size);
+					if(new_address != NULL){
 						for(int k = 0; k < old_size; k++){
 							unmap_frame(ptr_page_directory, (uint32)virtual_address + ((uint32)PAGE_SIZE * k));
 						}
-						return kmalloc(new_size);
+						return new_address;
 					}
+					return virtual_address;
 				}
-				else{
+			}
+			else{
+				void* new_address = kmalloc(new_size);
+				if(new_address != NULL){
 					for(int k = 0; k < old_size; k++){
 						unmap_frame(ptr_page_directory, (uint32)virtual_address + ((uint32)PAGE_SIZE * k));
 					}
-					return kmalloc(new_size);
-				}
-				if(found_address != 0){
-					for(int k = 0; k < requested_size; k++){
-						struct FrameInfo* new_frame = NULL;
-						allocate_frame(&new_frame);
-						map_frame(ptr_page_directory, new_frame, found_address + ((uint32)PAGE_SIZE * k), PERM_PRESENT|PERM_WRITEABLE);
-					}
-				}
-
-			}
-			else if(old_size == new_num_of_pages){
-				return virtual_address;
-			}
-			else{
-				uint32 remaining_size = old_size - new_num_of_pages;
-				for(int k = old_size; k > new_num_of_pages; k--){
-					unmap_frame(ptr_page_directory, (uint32)virtual_address + ((uint32)PAGE_SIZE  * (k - 1)));
+					return new_address;
 				}
 				return virtual_address;
 			}
-
-
+			if(found_address != 0){
+				for(int k = 0; k < requested_size; k++){
+					struct FrameInfo* new_frame = NULL;
+					allocate_frame(&new_frame);
+					map_frame(ptr_page_directory, new_frame, found_address + ((uint32)PAGE_SIZE * k), PERM_PRESENT|PERM_WRITEABLE);
+				}
 			}
+
+		}
+		else if(old_size == new_num_of_pages){
+			return virtual_address;
+		}
+		else{
+			uint32 remaining_size = old_size - new_num_of_pages;
+			for(int k = old_size; k > new_num_of_pages; k--){
+				unmap_frame(ptr_page_directory, (uint32)virtual_address + ((uint32)PAGE_SIZE  * (k - 1)));
+			}
+			return virtual_address;
 		}
 	}
 
 
 	return NULL;
 	//panic("krealloc() is not implemented yet...!!");
+	}
 }

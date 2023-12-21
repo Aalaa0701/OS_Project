@@ -18,7 +18,8 @@
 #include <kern/tests/test_working_set.h>
 
 extern uint8 bypassInstrLength ;
-
+uint32 page_boundary_tracking_decrement_sys_sbrk =  0;
+uint32 counter_for_decrement = 0;
 /*******************************/
 /* STRING I/O SYSTEM CALLS */
 /*******************************/
@@ -599,91 +600,97 @@ void* sys_sbrk(int increment)
 	 */
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
 	uint32 previous_break= env->segment_break;
-	if(increment > (env->segment_break - env->hard_limit ) || env->segment_break == env->hard_limit) {
-		return(void*) -1;
-	}
-		if(increment>0 && increment <(env->segment_break - env->hard_limit)){
+		if (increment >0 && increment <= (env->segment_break - env->hard_limit)){
+			if(increment > (env->segment_break - env->hard_limit)|| env->segment_break == env->hard_limit){
+//				return (void*) -1;
+				panic("exceeded the limit");
+			}
+			page_boundary_tracking_decrement_sys_sbrk = 0;
+
 			if (increment % PAGE_SIZE==0){
 				env->segment_break += increment;
 				uint32* page_table_ptr = NULL;
-				for(uint32 i = previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+				for(uint32 i=previous_break ;i<env->segment_break;i+=PAGE_SIZE){
 					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
 					if(result == TABLE_NOT_EXIST){
 						page_table_ptr = create_page_table(curenv->env_page_directory, i);
 					}
 					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
-
 				}
-				return (void*) previous_break;
+				return (void *)previous_break;
 			}
 			else{
+				if(increment < PAGE_SIZE){
+					if(previous_break % PAGE_SIZE != 0){
+						env->segment_break = ROUNDDOWN(env->segment_break, PAGE_SIZE);
+					}
+				}
+				if(increment > PAGE_SIZE){
+					if(previous_break % PAGE_SIZE != 0){
+						env->segment_break = ROUNDUP(env->segment_break, PAGE_SIZE);
+					}
+				}
+//				page_boundary_tracking_increment += increment;
 				int counter=0;
 				for(int i=increment; i%PAGE_SIZE!=0; i++){
-						counter++;
+					counter++;
 				}
 				env->segment_break += (increment+counter);
 				uint32* page_table_ptr = NULL;
-				for(uint32 i=previous_break ;i < env->segment_break;i+=PAGE_SIZE){
+				for(uint32 i=previous_break ;i<env->segment_break;i+=PAGE_SIZE){
 					int result = get_page_table(curenv->env_page_directory, i, &page_table_ptr);
 					if(result == TABLE_NOT_EXIST){
 						page_table_ptr = create_page_table(curenv->env_page_directory, i);
 					}
 					pt_set_page_permissions(curenv->env_page_directory, i, PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE, PERM_PRESENT);
-
 				}
-				return (void*)previous_break;
+				return (void *)previous_break;
 			}
 		}
-		else if(increment == 0){
-			return (void*) env->segment_break;
+		else if(increment ==0){
+			return (void *)env->segment_break;
 		}
 		else{
-			env->segment_break +=increment;
-			if((uint32)increment < PAGE_SIZE){
-				if(env->segment_break % PAGE_SIZE ==0){
-					env_page_ws_invalidate(env, previous_break);
-					pf_remove_env_page(env, previous_break);
-					pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
-					unmap_frame(ptr_page_directory,previous_break);
+			if(counter_for_decrement == 0){
+				env->segment_break -= PAGE_SIZE;
+				counter_for_decrement++;
+			}
+			env->segment_break += increment;
+			if((increment * -1) < PAGE_SIZE){
+				page_boundary_tracking_decrement_sys_sbrk += increment;
+				if(((int)page_boundary_tracking_decrement_sys_sbrk * -1) > PAGE_SIZE){
+					page_boundary_tracking_decrement_sys_sbrk += PAGE_SIZE;
+					uint32 page_removed = env->segment_break + (page_boundary_tracking_decrement_sys_sbrk * -1);
+					env_page_ws_invalidate(env, page_removed);
+					pf_remove_env_page(env, page_removed);
+					pt_set_page_permissions(env->env_page_directory, page_removed, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
+					unmap_frame(env->env_page_directory,page_removed);
 				}
 			}
 
-			else if((uint32)increment > PAGE_SIZE){
-				int noOfPages= (uint32)increment/PAGE_SIZE;
+			else if((increment * -1) > PAGE_SIZE){
+				page_boundary_tracking_decrement_sys_sbrk += increment;
+				int noOfPages= (increment/PAGE_SIZE) * -1;
+				uint32 *ptr_page_table = NULL;
+				uint32 offset = page_boundary_tracking_decrement_sys_sbrk + (noOfPages * PAGE_SIZE);
+				uint32 page_removed = env->segment_break + (offset * -1);
 				for(int i=0;i<noOfPages;i++){
-					env_page_ws_invalidate(env, previous_break);
-					pf_remove_env_page(env, previous_break);
-					pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
-					unmap_frame(ptr_page_directory,previous_break);
-					previous_break-=PAGE_SIZE;
+					env_page_ws_invalidate(env, page_removed);
+					pf_remove_env_page(env, page_removed);
+					pt_set_page_permissions(env->env_page_directory, page_removed, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
+					unmap_frame(env->env_page_directory,page_removed);
+					page_removed+=PAGE_SIZE;
 				}
 			}
 			else{
 				env_page_ws_invalidate(env, previous_break);
 				pf_remove_env_page(env, previous_break);
 				pt_set_page_permissions(env->env_page_directory, previous_break, 0, PERM_PRESENT|PERM_AVAILABLE|PERM_USER|PERM_WRITEABLE|PERM_USED|PERM_MODIFIED|PERM_BUFFERED);
-				unmap_frame(ptr_page_directory,previous_break);
-			}
-			uint32 num_of_elements_before_last = 0;
-			uint32 list_size = LIST_SIZE(&(env->page_WS_list));
-			struct WorkingSetElement* iterator = LIST_FIRST(&(env->page_WS_list));
-			for(int i = 0; i < list_size; i++){
-				if(iterator->virtual_address == env->page_last_WS_element->virtual_address){
-					break;
-				}
-				else{
-					num_of_elements_before_last++;
-					iterator = iterator->prev_next_info.le_next;
-				}
-			}
-			for(int i = 0; i < num_of_elements_before_last; i++){
-				struct WorkingSetElement* current_iterator = LIST_FIRST(&(env->page_WS_list));
-				LIST_REMOVE(&(env->page_WS_list), current_iterator);
-				LIST_INSERT_TAIL(&(env->page_WS_list), current_iterator);
+				unmap_frame(env->env_page_directory,previous_break);
 			}
 			return (void*) env->segment_break;
 		}
-
+		return NULL;
 
 
 }
