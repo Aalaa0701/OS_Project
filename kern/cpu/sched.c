@@ -262,41 +262,44 @@ void clock_interrupt_handler()
 		int one_var = 1;
 		fixed_point_t fixed_one = fix_int(one_var);
 		curenv->recentCPU = fix_add(prev_cpu, fixed_one);
-		if(ticks % 4 == 0 && ticks > 0){
+		if(scheduler_method == SCH_BSD){
+			if(ticks % 4 == 0 && ticks > 0){
 
-			fixed_point_t current_recent_cpu_division = fix_unscale(curenv->recentCPU, 4);
-			int current_nice_multiplication = curenv->nice * 2;
-			int current_recent_cpu_int = fix_trunc(current_recent_cpu_division);
-			int current_new_priority = PRI_MAX - current_recent_cpu_int - current_nice_multiplication;
-			if(current_new_priority > PRI_MAX){
-				current_new_priority = PRI_MAX;
-			}
-			if(current_new_priority < PRI_MIN){
-				current_new_priority = PRI_MIN;
-			}
-			curenv->priority = current_new_priority;
+				fixed_point_t current_recent_cpu_division = fix_unscale(curenv->recentCPU, 4);
+				int current_nice_multiplication = curenv->nice * 2;
+				int current_recent_cpu_int = fix_trunc(current_recent_cpu_division);
+				int current_new_priority = PRI_MAX - current_recent_cpu_int - current_nice_multiplication;
+				if(current_new_priority > PRI_MAX){
+					current_new_priority = PRI_MAX;
+				}
+				if(current_new_priority < PRI_MIN){
+					current_new_priority = PRI_MIN;
+				}
+				curenv->priority = current_new_priority;
 
-			for(int i = 0; i < num_of_ready_queues; i++){
-				for(int j = 0; j < queue_size(&(env_ready_queues[i])); j++){
-					struct Env* dequeued_env = dequeue(&(env_ready_queues[i]));
-					if(dequeued_env == NULL){
-						continue;
+				for(int i = 0; i < num_of_ready_queues; i++){
+					for(int j = 0; j < queue_size(&(env_ready_queues[i])); j++){
+						struct Env* dequeued_env = dequeue(&(env_ready_queues[i]));
+						if(dequeued_env == NULL){
+							continue;
+						}
+						fixed_point_t recent_cpu_division = fix_unscale(dequeued_env->recentCPU, 4);
+						int nice_multiplication = dequeued_env->nice * 2;
+						int recent_cpu_int = fix_trunc(recent_cpu_division);
+						int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
+						if(new_priority > PRI_MAX){
+							new_priority = PRI_MAX;
+						}
+						if(new_priority < PRI_MIN){
+							new_priority = PRI_MIN;
+						}
+						dequeued_env->priority = new_priority;
+						enqueue(&env_ready_queues[PRI_MAX - new_priority], dequeued_env);
 					}
-					fixed_point_t recent_cpu_division = fix_unscale(dequeued_env->recentCPU, 4);
-					int nice_multiplication = dequeued_env->nice * 2;
-					int recent_cpu_int = fix_trunc(recent_cpu_division);
-					int new_priority = PRI_MAX - recent_cpu_int - nice_multiplication;
-					if(new_priority > PRI_MAX){
-						new_priority = PRI_MAX;
-					}
-					if(new_priority < PRI_MIN){
-						new_priority = PRI_MIN;
-					}
-					dequeued_env->priority = new_priority;
-					enqueue(&env_ready_queues[PRI_MAX - new_priority], dequeued_env);
 				}
 			}
 		}
+
 		//every second
 		if(rounded_current != rounded_before && rounded_before > 0){
 			//recent cpu of every process & load avg
