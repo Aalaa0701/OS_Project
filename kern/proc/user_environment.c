@@ -506,6 +506,10 @@ void env_free(struct Env *e)
 			}
 
 		}
+		for(int k = 0; k < 1024; k++){
+			unmap_frame(e->env_page_directory, e->env_page_directory[k]);
+			e->env_page_directory[k] = 0;
+		}
 		kfree(e->env_page_directory);
 		sched_insert_exit(e);
 
