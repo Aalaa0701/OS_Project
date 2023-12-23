@@ -600,6 +600,9 @@ void* sys_sbrk(int increment)
 	 */
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
 	uint32 previous_break= env->segment_break;
+	if(increment > 0 && env->segment_break == env->hard_limit){
+		return (void*)-1;
+	}
 		if (increment >0 && increment <= (env->segment_break - env->hard_limit)){
 			if(increment > (env->segment_break - env->hard_limit)|| env->segment_break == env->hard_limit){
 //				return (void*) -1;
@@ -651,10 +654,10 @@ void* sys_sbrk(int increment)
 			return (void *)env->segment_break;
 		}
 		else{
-			if(counter_for_decrement == 0){
-				env->segment_break -= PAGE_SIZE;
-				counter_for_decrement++;
-			}
+//			if(counter_for_decrement == 0){
+//				env->segment_break -= PAGE_SIZE;
+//				counter_for_decrement++;
+//			}
 			env->segment_break += increment;
 			if((increment * -1) < PAGE_SIZE){
 				page_boundary_tracking_decrement_sys_sbrk += increment;

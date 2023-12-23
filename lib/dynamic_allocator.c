@@ -173,82 +173,34 @@ void *alloc_block_FF(uint32 size)
 			found = 0;
 			continue;
 		}
-//		else if(list_iterator->is_free == 1 && list_iterator->size < size_to_be_allocated){
-//			if(list_iterator != LIST_LAST(&myListOfBlocks)){
-//				uint32 wanted_size = size_to_be_allocated - list_iterator->size;
-//				if(list_iterator->prev_next_info.le_next->is_free == 1 && list_iterator->size >= wanted_size){
-//					struct BlockMetaData* next_block = list_iterator->prev_next_info.le_next;
-//					uint32 remaining_size = next_block->size - wanted_size;
-//					if(remaining_size > (uint32)sizeOfMetaData()){
-//						list_iterator->is_free = 0;
-//						list_iterator->size = size_to_be_allocated;
-//						//struct BlockMetaData* new_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
-//						next_block = (struct BlockMetaData*)((uint32)list_iterator + address_offset_2);
-//						next_block->is_free = 1;
-//						next_block->size = remaining_size;
-//						found = 1;
-//						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
-//						return address;
-//					}
-//					else{
-//						list_iterator->is_free = 0;
-//						list_iterator->size = size_to_be_allocated + remaining_size;
-//						next_block->is_free = 0;
-//						next_block->size = 0;
-//						LIST_REMOVE(&myListOfBlocks, next_block);
-//						found = 1;
-//						struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)list_iterator + (unsigned int)sizeOfMetaData());
-//						return address;
-//					}
-//				}
-//				else{
-//					list_iterator = list_iterator->prev_next_info.le_next;
-//					found = 0;
-//					continue;
-//				}
-//			}
-//		}
-//		else if(list_iterator->is_free == 0){
-//			list_iterator = list_iterator->prev_next_info.le_next;
-//			found = 0;
-//			continue;
-//		}
 	}
 
 	if(found == 0){
-			if(size_to_be_allocated % PAGE_SIZE == 0){
-				if(sbrk(size_to_be_allocated) != NULL && sbrk(size_to_be_allocated) != (void*)-1){
-					_Block = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks) + LIST_LAST(&myListOfBlocks)->size);
-					LIST_INSERT_TAIL(&myListOfBlocks, _Block);
-					_Block->is_free = 0;
-					_Block->size = size_to_be_allocated;
-					struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
-					return address;
-				}
+
+		uint32 returned_address = (uint32)sbrk(size_to_be_allocated);
+		if(returned_address != 0 && returned_address != -1){
+
+			uint32 allowed_to = (uint32)sbrk(0);
+			uint32 size_allocated_in_sbrk = allowed_to - returned_address;
+			_Block = (struct BlockMetaData*)returned_address;
+			LIST_INSERT_TAIL(&myListOfBlocks, _Block);
+			_Block->is_free = 0;
+			_Block->size = size_to_be_allocated;
+			uint32 start_size_free = (uint32)_Block + _Block->size;
+			uint32 remaining_size = allowed_to - start_size_free;
+			if(remaining_size > (uint32)sizeOfMetaData()){
+				struct BlockMetaData*  new_block = (struct BlockMetaData*)((unsigned int)_Block + _Block->size);
+				LIST_INSERT_TAIL(&myListOfBlocks, new_block);
+				new_block->is_free = 1;
+				new_block->size = remaining_size;
 			}
 			else{
-				if(sbrk(size_to_be_allocated) != NULL && sbrk(size_to_be_allocated) != (void*)-1){
-					uint32 size_in_sbrk = (size_to_be_allocated / PAGE_SIZE) + 1;
-					uint32 size_free = (size_in_sbrk * PAGE_SIZE) - size_to_be_allocated;
-					_Block = (struct BlockMetaData*)((unsigned int)LIST_LAST(&myListOfBlocks) + LIST_LAST(&myListOfBlocks)->size);
-					LIST_INSERT_TAIL(&myListOfBlocks, _Block);
-					_Block->is_free = 0;
-					if(size_free > sizeOfMetaData()){
-						struct BlockMetaData* free_block = (struct BlockMetaData*)((unsigned int)_Block + size_to_be_allocated);
-						free_block->is_free = 1;
-						free_block->size = size_free;
-						_Block->size = size_to_be_allocated;
-						LIST_INSERT_TAIL(&myListOfBlocks, free_block);
-					}
-					else{
-						_Block->size = size_to_be_allocated + size_free;
-					}
-					struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
-					return address;
-				}
+				_Block->size = size_to_be_allocated + remaining_size;
 			}
+			struct BlockMetaData* address = (struct BlockMetaData*)((unsigned int)_Block + (unsigned int)sizeOfMetaData());
+			return address;
 		}
-		cprintf("null!!\n");
+	}
 		return NULL;
 	}
 
